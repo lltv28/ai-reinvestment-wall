@@ -141,8 +141,10 @@ export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
       }}
     >
       {Array.from({ length: PHONE_COUNT }, (_, index) => {
-        const phoneScreen = miniPhoneScreen(index, frame.connectionElapsedMs);
         const connected = visible && index === connection.phoneIndex;
+        const phoneScreen = connected
+          ? 'paid'
+          : miniPhoneScreen(index, frame.connectionElapsedMs);
 
         return (
           <div

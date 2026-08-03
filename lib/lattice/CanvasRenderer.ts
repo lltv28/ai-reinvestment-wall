@@ -395,19 +395,12 @@ export class CanvasRenderer {
 
     const pairs = this.transactionPairs(graph, positionById);
     pairs.forEach((pair, index) => {
-      const saleProgress =
-        frame.elapsedMs < REINVESTMENT_TIMING.aggregateEnd
-          ? 0
-          : frame.elapsedMs >= REINVESTMENT_TIMING.brainEnd
-            ? 1
-            : clamp01((frame.phaseProgress - index * 0.1) / 0.56);
       const returnProgress =
         frame.elapsedMs < REINVESTMENT_TIMING.brainEnd
           ? 0
           : frame.elapsedMs >= REINVESTMENT_TIMING.adsEnd
             ? 1
             : clamp01((frame.phaseProgress - index * 0.09) / 0.6);
-      this.drawLineProgress(pair.lead, pair.ad, easeInOutCubic(saleProgress), 0.34, 1.5);
       this.drawLineProgress(pair.ad, triager, easeInOutCubic(returnProgress), 0.55, 1.8);
     });
 
@@ -450,6 +443,37 @@ export class CanvasRenderer {
       ctx.globalAlpha = 1;
       this.drawPolylineProgress(connectorPoints, drawProgress, 0.64 * fade, 1.9);
       this.drawPolylineParticle(connectorPoints, particleProgress);
+
+      const adPositions = graph.nodes
+        .filter((node) => node.ring === "icon" && node.zoneIndex === 0)
+        .map((node) => positionById.get(node.id))
+        .filter((position): position is { x: number; y: number } => Boolean(position))
+        .sort((a, b) => a.y - b.y);
+      const adIndex = Math.round(
+        connection.triagerIndex * ((adPositions.length - 1) / (avatarPositions.length - 1)),
+      );
+      const adPosition = adPositions[adIndex];
+      const saleProgress = clamp01((connection.progress - 0.32) / 0.52);
+      if (adPosition && saleProgress > 0) {
+        this.drawLineProgress(
+          avatarPosition,
+          adPosition,
+          easeInOutCubic(saleProgress),
+          0.32 * fade,
+          1.5,
+        );
+        this.drawParticle(avatarPosition, adPosition, saleProgress, 4.6);
+
+        if (saleProgress > 0.78) {
+          const arrival = clamp01((saleProgress - 0.78) / 0.22);
+          ctx.globalAlpha = (1 - arrival) * 0.18;
+          ctx.fillStyle = PALETTE.flow;
+          ctx.beginPath();
+          ctx.arc(adPosition.x, adPosition.y, 11 + arrival * 9, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      }
     }
   }
 
@@ -523,13 +547,6 @@ export class CanvasRenderer {
     if (!triager || !brain) return;
 
     const pairs = this.transactionPairs(graph, positionById);
-    if (frame.phase === "brain") {
-      pairs.forEach((pair, index) => {
-        const localProgress = clamp01((frame.phaseProgress - index * 0.1) / 0.56);
-        this.drawParticle(pair.lead, pair.ad, localProgress, 4.6);
-      });
-    }
-
     if (frame.phase === "ads") {
       pairs.forEach((pair, index) => {
         const localProgress = clamp01((frame.phaseProgress - index * 0.09) / 0.6);
