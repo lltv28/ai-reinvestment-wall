@@ -169,7 +169,13 @@ export function createVisualizerApp(
     const valueBucket = Math.floor(reinvestmentSnapshot.collectedUsd / 50);
     const phoneVisible = reinvestmentSnapshot.elapsedMs >= REINVESTMENT_TIMING.phoneReveal;
     const phoneScreen = assessmentPhoneScreen(reinvestmentSnapshot);
-    const key = `${reinvestmentSnapshot.phase}:${phoneVisible}:${phoneScreen}:${valueBucket}:${reinvestmentSnapshot.generatedLeads}:${reinvestmentSnapshot.cycle}`;
+    const phoneMotionTick =
+      phoneVisible && reinvestmentSnapshot.elapsedMs < REINVESTMENT_TIMING.aggregateEnd
+        ? Math.floor(
+            (reinvestmentSnapshot.elapsedMs - REINVESTMENT_TIMING.phoneReveal) / 250,
+          )
+        : 0;
+    const key = `${reinvestmentSnapshot.phase}:${phoneVisible}:${phoneScreen}:${phoneMotionTick}:${valueBucket}:${reinvestmentSnapshot.generatedLeads}:${reinvestmentSnapshot.cycle}`;
     if (!force && key === lastPublishedReinvestmentKey) return;
     lastPublishedReinvestmentKey = key;
     dependencies.onReinvestmentUpdate?.(reinvestmentSnapshot);

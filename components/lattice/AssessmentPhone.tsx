@@ -16,26 +16,34 @@ const ASSESSMENT_STAGES: AssessmentPhoneScreen[] = [
   'checkout',
   'paid',
 ];
-const STAGE_OFFSETS = [0, 1, -1, 2, 0, -2, 1, -1, 2] as const;
+const PHONE_STAGE_DURATION_MS = 1_500;
+const PHONE_STAGE_DELAYS_MS = [0, 170, 340, 510, 680, 850, 1_020, 1_190, 1_360] as const;
+const PHONE_START_STAGES = [0, 2, 1, 3, 4, 1, 0, 4, 2] as const;
 
 function miniPhoneScreen(
-  currentScreen: AssessmentPhoneScreen,
+  frame: ReinvestmentFrame,
   phoneIndex: number,
-  cycle: number,
 ): AssessmentPhoneScreen {
-  if (currentScreen === 'funding' || currentScreen === 'ready') {
+  const currentScreen = assessmentPhoneScreen(frame);
+  if (
+    frame.elapsedMs < REINVESTMENT_TIMING.phoneReveal ||
+    currentScreen === 'paid' ||
+    currentScreen === 'funding' ||
+    currentScreen === 'ready'
+  ) {
     return currentScreen;
   }
 
-  const currentStage = ASSESSMENT_STAGES.indexOf(currentScreen);
-  const offsetIndex = (phoneIndex * 5 + cycle * 2) % STAGE_OFFSETS.length;
-  const offset = STAGE_OFFSETS[offsetIndex] ?? 0;
-  const variedStage = Math.max(
-    0,
-    Math.min(ASSESSMENT_STAGES.length - 1, currentStage + offset),
+  const scheduleIndex = (phoneIndex + frame.cycle * 2) % PHONE_COUNT;
+  const activeElapsedMs = frame.elapsedMs - REINVESTMENT_TIMING.phoneReveal;
+  const stageDelayMs = PHONE_STAGE_DELAYS_MS[scheduleIndex] ?? 0;
+  const initialStage = PHONE_START_STAGES[scheduleIndex] ?? 0;
+  const completedStages = Math.floor(
+    (activeElapsedMs + stageDelayMs) / PHONE_STAGE_DURATION_MS,
   );
+  const stageIndex = (initialStage + completedStages) % ASSESSMENT_STAGES.length;
 
-  return ASSESSMENT_STAGES[variedStage] ?? currentScreen;
+  return ASSESSMENT_STAGES[stageIndex] ?? currentScreen;
 }
 
 function MiniPhoneContent({ screen }: { screen: AssessmentPhoneScreen }) {
@@ -118,7 +126,6 @@ function MiniPhoneContent({ screen }: { screen: AssessmentPhoneScreen }) {
 
 export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
   const visible = frame.elapsedMs >= REINVESTMENT_TIMING.phoneReveal;
-  const screen = assessmentPhoneScreen(frame);
   const flowFocused = ['brain', 'ads', 'grow', 'complete'].includes(frame.phase);
 
   return (
@@ -148,7 +155,7 @@ export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
       }}
     >
       {Array.from({ length: PHONE_COUNT }, (_, index) => {
-        const phoneScreen = miniPhoneScreen(screen, index, frame.cycle);
+        const phoneScreen = miniPhoneScreen(frame, index);
 
         return (
           <div
