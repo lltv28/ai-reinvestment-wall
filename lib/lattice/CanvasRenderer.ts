@@ -231,7 +231,14 @@ export class CanvasRenderer {
     }
 
     if (reinvestment && reinvestment.phase !== "idle") {
-      this.drawReinvestmentPaths(graph, positionById, reinvestment);
+      this.drawReinvestmentPaths(
+        graph,
+        positionById,
+        reinvestment,
+        width,
+        height,
+        activeCamera,
+      );
       this.drawReinvestmentParticles(graph, positionById, width, height, reinvestment);
     }
 
@@ -282,6 +289,9 @@ export class CanvasRenderer {
     graph: WheelGraph,
     positionById: Map<string, { x: number; y: number }>,
     frame: ReinvestmentFrame,
+    width: number,
+    height: number,
+    camera: Camera,
   ): void {
     const triager = positionById.get(AI_TRIAGER_NODE_ID);
     const brain = positionById.get(AI_BRAIN_NODE_ID);
@@ -312,6 +322,31 @@ export class CanvasRenderer {
           ? 1
           : frame.phaseProgress;
     this.drawLineProgress(triager, brain, easeInOutCubic(brainProgress), 0.9, 3);
+
+    const rlNode = graph.nodes.find(
+      (node) => node.ring === "avatar" && node.zoneIndex === 0 && node.initials === "RL",
+    );
+    const rlPosition = rlNode ? positionById.get(rlNode.id) : undefined;
+    const phoneProgress = clamp01(
+      (frame.elapsedMs - REINVESTMENT_TIMING.phoneReveal) / 900,
+    );
+    if (rlPosition && phoneProgress > 0) {
+      const rlScreen = worldToScreen(rlPosition, width, height, camera);
+      const phoneAnchor = screenToWorld(
+        width * (1128 / 1920),
+        rlScreen.y,
+        width,
+        height,
+        camera,
+      );
+      this.drawLineProgress(
+        rlPosition,
+        phoneAnchor,
+        easeInOutCubic(phoneProgress),
+        0.58,
+        1.7,
+      );
+    }
   }
 
   private transactionPairs(
@@ -507,7 +542,7 @@ export class CanvasRenderer {
         ctx.textBaseline = "middle";
         ctx.fillText(node.initials, position.x, position.y);
       }
-      if (node.ring === "hub" && node.label) {
+      if (node.ring === "hub" && node.label && node.id === AI_TRIAGER_NODE_ID) {
         // Hubs sit close together on a small inner ring, so a label drawn
         // straight below every hub collides with its neighbors. Push each
         // label outward along its own hub's angle instead, fanning the 6
@@ -515,21 +550,21 @@ export class CanvasRenderer {
         const labelOffset = node.radius + 14;
         const labelX = position.x + Math.cos(node.angle) * labelOffset;
         const labelY = position.y + Math.sin(node.angle) * labelOffset;
-        const isSystemNode = node.id === AI_TRIAGER_NODE_ID;
-        if (isSystemNode) {
-          ctx.fillStyle = "rgba(247, 248, 247, 0.94)";
-          ctx.beginPath();
-          if (typeof ctx.roundRect === "function") {
-            ctx.roundRect(labelX - 6, labelY - 12, 92, 24, 6);
-          } else {
-            ctx.rect(labelX - 6, labelY - 12, 92, 24);
-          }
-          ctx.fill();
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        ctx.shadowColor = "rgba(20, 32, 27, 0.13)";
+        ctx.shadowBlur = 14;
+        ctx.shadowOffsetY = 4;
+        ctx.beginPath();
+        if (typeof ctx.roundRect === "function") {
+          ctx.roundRect(labelX - 10, labelY - 17, 112, 34, 9);
+        } else {
+          ctx.rect(labelX - 10, labelY - 17, 112, 34);
         }
+        ctx.fill();
+        ctx.restore();
         ctx.fillStyle = PALETTE.hubLabelText;
-        ctx.font = isSystemNode
-          ? "600 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif"
-          : "12px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+        ctx.font = "600 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
         ctx.textAlign = Math.cos(node.angle) >= 0 ? "left" : "right";
         ctx.textBaseline = "middle";
         ctx.fillText(node.label, labelX, labelY);

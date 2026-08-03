@@ -1,13 +1,19 @@
 'use client';
 
 import { C, R, W } from '@/lib/adStage';
-import type { ReinvestmentFrame } from '@/lib/lattice/reinvestment';
+import {
+  REINVESTMENT_TIMING,
+  type ReinvestmentFrame,
+} from '@/lib/lattice/reinvestment';
 
 type PhoneScreen = 'landing' | 'question' | 'plan' | 'checkout' | 'paid' | 'funding' | 'ready';
 
 function screenFor(frame: ReinvestmentFrame): PhoneScreen {
   if (frame.phase === 'focus' || frame.phase === 'idle') return 'landing';
-  if (frame.phase === 'collect') return frame.phaseProgress < 0.46 ? 'question' : 'plan';
+  if (frame.phase === 'collect') {
+    if (frame.phaseProgress < 0.2) return 'landing';
+    return frame.phaseProgress < 0.58 ? 'question' : 'plan';
+  }
   if (frame.phase === 'aggregate') return 'checkout';
   if (frame.phase === 'brain') return 'paid';
   if (frame.phase === 'ads') return 'funding';
@@ -129,7 +135,7 @@ function PhoneContent({ screen }: { screen: PhoneScreen }) {
 }
 
 export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
-  const visible = frame.phase !== 'idle';
+  const visible = frame.elapsedMs >= REINVESTMENT_TIMING.phoneReveal;
   const screen = screenFor(frame);
 
   return (

@@ -8,6 +8,7 @@ export const GENERATED_LEAD_COUNT = 0;
 
 export const REINVESTMENT_TIMING = {
   focusEnd: 2_000,
+  phoneReveal: 2_350,
   collectEnd: 7_000,
   aggregateEnd: 9_000,
   brainEnd: 11_000,
