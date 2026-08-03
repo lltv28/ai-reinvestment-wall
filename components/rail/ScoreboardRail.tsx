@@ -11,6 +11,7 @@ export function ScoreboardRail({
   upsellPct,
   feed,
   width,
+  label = 'AI Growth Loop',
 }: {
   revenue: number;
   purchases: number;
@@ -18,6 +19,7 @@ export function ScoreboardRail({
   upsellPct: number;
   feed: FeedEvent[];
   width: number;
+  label?: string;
 }) {
   return (
     <aside
@@ -42,7 +44,7 @@ export function ScoreboardRail({
             textTransform: 'uppercase',
           }}
         >
-          Low Ticket v1.2
+          {label}
         </span>
       </div>
 

@@ -1,6 +1,7 @@
 import { createRandom } from "./random";
 import { buildLeadIdentities } from "./leads";
 import { buildRepLabel, SALES_REPS } from "./salesReps";
+import { ADS_NODE_ID, AI_BRAIN_NODE_ID, AI_TRIAGER_NODE_ID } from "./reinvestment";
 import { angleForIndex } from "./wheelLayout";
 import type { WheelGraph, WheelLink, WheelNode } from "./types";
 
@@ -12,8 +13,8 @@ export const ICON_PER_ZONE = 22;
 export const AVATAR_COUNT = 96;
 export const SATELLITE_PER_ICON = 2;
 
-const ZONE_COLORS = ["#2f6df6", "#1f9d55", "#e0524d", "#d97706", "#8b5cf6", "#0f9488"];
-const PERSON_COLORS = ["#2f6f4f", "#7a4fc9", "#c9634f", "#3f7fae", "#b08a2e"];
+const ZONE_COLORS = ["#2E7D52", "#597267", "#718079", "#14201B", "#789484", "#426B58"];
+const PERSON_COLORS = ["#2E7D52", "#4F6F62", "#719183", "#A47A58", "#355E4C"];
 
 const LEAD_IDENTITIES = buildLeadIdentities(AVATAR_COUNT);
 
@@ -31,8 +32,8 @@ const RADIUS_FRACTIONS = {
 } as const;
 
 const NODE_PX_RADIUS = {
-  center: 14,
-  hub: 18,
+  center: 42,
+  hub: 20,
   gray: 3,
   gold: 3,
   icon: 6,
@@ -118,27 +119,31 @@ export function generateVault(input: {
   };
 
   const center: WheelNode = {
-    id: "center",
+    id: AI_BRAIN_NODE_ID,
     ring: "center",
     angle: 0,
     radiusFraction: RADIUS_FRACTIONS.center,
     radius: NODE_PX_RADIUS.center,
     color: "#14201b",
+    label: "AI Brain",
   };
   nodes.push(center);
 
   const hubs: WheelNode[] = [];
   for (let zoneIndex = 0; zoneIndex < ZONE_COUNT; zoneIndex += 1) {
     const repName = SALES_REPS[(input.seed + zoneIndex) % SALES_REPS.length]!;
+    const id = `hub-${zoneIndex}`;
+    const isAiTriagers = id === AI_TRIAGER_NODE_ID;
+    const isAds = id === ADS_NODE_ID;
     const hub: WheelNode = {
-      id: `hub-${zoneIndex}`,
+      id,
       ring: "hub",
       zoneIndex,
       angle: angleForIndex(zoneIndex, ZONE_COUNT),
       radiusFraction: RADIUS_FRACTIONS.hub,
-      radius: NODE_PX_RADIUS.hub,
+      radius: isAiTriagers || isAds ? 28 : NODE_PX_RADIUS.hub,
       color: ZONE_COLORS[zoneIndex]!,
-      label: buildRepLabel(repName),
+      label: isAiTriagers ? "AI Triagers" : isAds ? "Ads" : buildRepLabel(repName),
     };
     hubs.push(hub);
     nodes.push(hub);

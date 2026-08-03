@@ -10,6 +10,7 @@ import {
   worldToScreen,
   type Camera,
 } from "./CanvasRenderer";
+import { ADS_NODE_ID, AI_TRIAGER_NODE_ID } from "./reinvestment";
 import type { WheelGraph, WheelNode } from "./types";
 
 describe("nodePixelPosition", () => {
@@ -131,6 +132,25 @@ describe("neighborIds", () => {
     // ...but nothing from a different rep's zone does.
     expect(ids.has("hub-1")).toBe(false);
     expect(ids.has("avatar-1-a")).toBe(false);
+  });
+
+  it("keeps Ads visible during the AI Triagers reinvestment drill", () => {
+    const ads: WheelNode = {
+      id: ADS_NODE_ID,
+      ring: "hub",
+      zoneIndex: 3,
+      angle: Math.PI,
+      radiusFraction: 0.26,
+      radius: 28,
+      color: "#14201b",
+    };
+    const triagers = { ...hub0, id: AI_TRIAGER_NODE_ID };
+    const reinvestmentGraph: WheelGraph = {
+      nodes: [center, triagers, ads],
+      links: [{ id: "loop", sourceId: center.id, targetId: triagers.id }],
+    };
+
+    expect(neighborIds(reinvestmentGraph, AI_TRIAGER_NODE_ID).has(ADS_NODE_ID)).toBe(true);
   });
 });
 

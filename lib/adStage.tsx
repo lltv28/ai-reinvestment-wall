@@ -5,7 +5,7 @@
 // the same auto-playing funnel iframes, so the five concepts stay visually and
 // behaviorally coherent — only the framing/layout differs per route.
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createSeededRandom } from '@/lib/demoAuto';
 import { BASE_PATH } from '@/lib/basePath';
 

@@ -1,9 +1,9 @@
-// Base path for GitHub Pages project-site hosting ("/lattice-wall").
+// Base path for GitHub Pages project-site hosting ("/ai-reinvestment-wall").
 // Empty in local dev (serves from root); set in production builds. Mirrors the
 // logic in next.config.ts so next/image, next/link, and raw asset() paths agree.
 export const BASE_PATH =
   process.env.NEXT_PUBLIC_BASE_PATH ||
-  (process.env.NODE_ENV === 'production' ? '/lattice-wall' : '');
+  (process.env.NODE_ENV === 'production' ? '/ai-reinvestment-wall' : '');
 
 /**
  * Prefix a root-absolute asset path (e.g. "/paywall-video.mp4") with the base

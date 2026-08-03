@@ -3,6 +3,13 @@ import { generateVault } from "./generateVault";
 import { buildGrowthSchedule, type GrowthBatch } from "./growthSchedule";
 import type { WheelGraph, WheelNode } from "./types";
 import {
+  AI_TRIAGER_NODE_ID,
+  IDLE_REINVESTMENT_FRAME,
+  REINVESTMENT_TIMING,
+  reinvestmentFrame,
+  type ReinvestmentFrame,
+} from "./reinvestment";
+import {
   asideCamera,
   CanvasRenderer,
   identityCamera,
@@ -24,6 +31,8 @@ export interface VisualizerApp {
   getFocusedLeadId(): number | undefined;
   getLeadNodes(): WheelNode[];
   markClosed(nodeId: string): void;
+  startReinvestment(): void;
+  getReinvestmentSnapshot(): ReinvestmentFrame;
 }
 
 type Renderer = Pick<CanvasRenderer, "render" | "resize">;
@@ -31,6 +40,7 @@ type Renderer = Pick<CanvasRenderer, "render" | "resize">;
 export interface VisualizerDependencies {
   rendererFactory?: (canvas: HTMLCanvasElement) => Renderer;
   onAction?: (action: VaultAction) => void;
+  onReinvestmentUpdate?: (frame: ReinvestmentFrame) => void;
 }
 
 function randomSeed(): number {
@@ -92,6 +102,10 @@ export function createVisualizerApp(
         return [];
       },
       markClosed(): void {},
+      startReinvestment(): void {},
+      getReinvestmentSnapshot(): ReinvestmentFrame {
+        return IDLE_REINVESTMENT_FRAME;
+      },
     };
   }
   renderer.resize(initialWidth, initialHeight);
@@ -102,6 +116,11 @@ export function createVisualizerApp(
   let nextGrowthBatchIndex = 0;
   let lastFrameTimeMs = performance.now();
   let paused = false;
+  let reinvestmentCycle = 0;
+  let reinvestmentStartedAtMs: number | undefined;
+  let reinvestmentSnapshot = IDLE_REINVESTMENT_FRAME;
+  let nextAutomaticReinvestmentMs = lastFrameTimeMs + 4_000;
+  let lastPublishedReinvestmentKey = "";
 
   function visibleGraph(): WheelGraph {
     if (!growthSchedule) return graph;
@@ -138,7 +157,24 @@ export function createVisualizerApp(
   }
 
   function renderNow(): void {
-    renderer.render(visibleGraph(), focusedNodeId, camera);
+    renderer.render(visibleGraph(), focusedNodeId, camera, reinvestmentSnapshot);
+  }
+
+  function publishReinvestment(force = false): void {
+    const valueBucket = Math.floor(reinvestmentSnapshot.collectedUsd / 50);
+    const key = `${reinvestmentSnapshot.phase}:${valueBucket}:${reinvestmentSnapshot.generatedLeads}:${reinvestmentSnapshot.cycle}`;
+    if (!force && key === lastPublishedReinvestmentKey) return;
+    lastPublishedReinvestmentKey = key;
+    dependencies.onReinvestmentUpdate?.(reinvestmentSnapshot);
+  }
+
+  function startReinvestment(now = performance.now()): void {
+    reinvestmentCycle += 1;
+    reinvestmentStartedAtMs = now;
+    reinvestmentSnapshot = reinvestmentFrame(0, reinvestmentCycle);
+    focusedNodeId = AI_TRIAGER_NODE_ID;
+    publishReinvestment(true);
+    renderNow();
   }
 
   function startGraph(): void {
@@ -221,6 +257,10 @@ export function createVisualizerApp(
       renderNow();
       return;
     }
+    if (clickedId === AI_TRIAGER_NODE_ID) {
+      startReinvestment();
+      return;
+    }
     focusedNodeId = focusedNodeId === clickedId ? undefined : clickedId;
     renderNow();
   }
@@ -295,6 +335,25 @@ export function createVisualizerApp(
     lastFrameTimeMs = now;
 
     let changed = false;
+
+    if (reinvestmentStartedAtMs === undefined && now >= nextAutomaticReinvestmentMs) {
+      startReinvestment(now);
+      changed = true;
+    }
+
+    if (reinvestmentStartedAtMs !== undefined) {
+      const elapsedMs = now - reinvestmentStartedAtMs;
+      reinvestmentSnapshot = reinvestmentFrame(elapsedMs, reinvestmentCycle);
+      publishReinvestment();
+      changed = true;
+      if (elapsedMs >= REINVESTMENT_TIMING.growEnd) {
+        reinvestmentSnapshot = reinvestmentFrame(REINVESTMENT_TIMING.growEnd, reinvestmentCycle);
+        reinvestmentStartedAtMs = undefined;
+        focusedNodeId = undefined;
+        nextAutomaticReinvestmentMs = now + 5_000;
+        publishReinvestment(true);
+      }
+    }
 
     if (!paused && growthSchedule) {
       growthElapsedSeconds += deltaMs / 1000;
@@ -379,5 +438,9 @@ export function createVisualizerApp(
     getFocusedLeadId,
     getLeadNodes,
     markClosed,
+    startReinvestment,
+    getReinvestmentSnapshot(): ReinvestmentFrame {
+      return reinvestmentSnapshot;
+    },
   };
 }
