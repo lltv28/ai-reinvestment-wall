@@ -9,6 +9,34 @@ import {
 } from '@/lib/lattice/reinvestment';
 
 const PHONE_COUNT = 9;
+const ASSESSMENT_STAGES: AssessmentPhoneScreen[] = [
+  'landing',
+  'question',
+  'plan',
+  'checkout',
+  'paid',
+];
+const STAGE_OFFSETS = [0, 1, -1, 2, 0, -2, 1, -1, 2] as const;
+
+function miniPhoneScreen(
+  currentScreen: AssessmentPhoneScreen,
+  phoneIndex: number,
+  cycle: number,
+): AssessmentPhoneScreen {
+  if (currentScreen === 'funding' || currentScreen === 'ready') {
+    return currentScreen;
+  }
+
+  const currentStage = ASSESSMENT_STAGES.indexOf(currentScreen);
+  const offsetIndex = (phoneIndex * 5 + cycle * 2) % STAGE_OFFSETS.length;
+  const offset = STAGE_OFFSETS[offsetIndex] ?? 0;
+  const variedStage = Math.max(
+    0,
+    Math.min(ASSESSMENT_STAGES.length - 1, currentStage + offset),
+  );
+
+  return ASSESSMENT_STAGES[variedStage] ?? currentScreen;
+}
 
 function MiniPhoneContent({ screen }: { screen: AssessmentPhoneScreen }) {
   if (screen === 'landing') {
@@ -119,22 +147,26 @@ export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
         zIndex: 6,
       }}
     >
-      {Array.from({ length: PHONE_COUNT }, (_, index) => (
-        <div
-          className="mini-phone"
-          key={index}
-          style={{ transitionDelay: visible ? `${index * 35}ms` : '0ms' }}
-        >
-          <div className="mini-speaker" />
-          <div className="mini-screen">
-            <header><span>K</span><i /></header>
-            <div key={screen} className="mini-content">
-              <MiniPhoneContent screen={screen} />
+      {Array.from({ length: PHONE_COUNT }, (_, index) => {
+        const phoneScreen = miniPhoneScreen(screen, index, frame.cycle);
+
+        return (
+          <div
+            className="mini-phone"
+            key={index}
+            style={{ transitionDelay: visible ? `${index * 35}ms` : '0ms' }}
+          >
+            <div className="mini-speaker" />
+            <div className="mini-screen">
+              <header><span>K</span><i /></header>
+              <div key={`${phoneScreen}-${frame.cycle}`} className="mini-content">
+                <MiniPhoneContent screen={phoneScreen} />
+              </div>
+              <div className="mini-home" />
             </div>
-            <div className="mini-home" />
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       <style jsx global>{`
         .mini-phone { position:relative; width:86px; height:142px; padding:4px; box-sizing:border-box; border-radius:16px; background:#151917; box-shadow:0 10px 22px rgba(20,32,27,.13), 0 2px 7px rgba(20,32,27,.1); opacity:0; transform:translateY(10px) scale(.94); transition:opacity 420ms ease, transform 520ms cubic-bezier(.16,1,.3,1); }
