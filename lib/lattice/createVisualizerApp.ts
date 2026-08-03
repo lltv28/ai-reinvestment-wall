@@ -166,7 +166,8 @@ export function createVisualizerApp(
 
   function publishReinvestment(force = false): void {
     const valueBucket = Math.floor(reinvestmentSnapshot.collectedUsd / 50);
-    const key = `${reinvestmentSnapshot.phase}:${valueBucket}:${reinvestmentSnapshot.generatedLeads}:${reinvestmentSnapshot.cycle}`;
+    const phoneVisible = reinvestmentSnapshot.elapsedMs >= REINVESTMENT_TIMING.phoneReveal;
+    const key = `${reinvestmentSnapshot.phase}:${phoneVisible}:${valueBucket}:${reinvestmentSnapshot.generatedLeads}:${reinvestmentSnapshot.cycle}`;
     if (!force && key === lastPublishedReinvestmentKey) return;
     lastPublishedReinvestmentKey = key;
     dependencies.onReinvestmentUpdate?.(reinvestmentSnapshot);
