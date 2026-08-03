@@ -3,23 +3,15 @@
 import dynamic from 'next/dynamic';
 import { useCallback, useMemo, useState } from 'react';
 import { AssessmentPhone } from '@/components/lattice/AssessmentPhone';
-import { ScoreboardRail } from '@/components/rail/ScoreboardRail';
 import {
-  BASE_CALLS,
-  BASE_PURCHASES,
-  BASE_REVENUE,
   STAGE_H,
   STAGE_W,
-  UPSELL_PCT,
   useFitStage,
-  useLiveTally,
   useRecordingChrome,
 } from '@/lib/adStage';
 import type { VisualizerDependencies } from '@/lib/lattice/createVisualizerApp';
 import {
   IDLE_REINVESTMENT_FRAME,
-  PAYMENT_PARTICLE_COUNT,
-  REINVESTMENT_VALUE_USD,
   type ReinvestmentFrame,
 } from '@/lib/lattice/reinvestment';
 
@@ -28,20 +20,9 @@ const LatticeCanvas = dynamic(
   { ssr: false },
 );
 
-const PAD = 40;
-const RAIL_W = 360;
-const COL_GAP = 40;
-const AMBIENT_FIRST_LEAD_NO = 200;
-
 export default function LatticePage() {
   const fit = useFitStage();
   useRecordingChrome('#F1F4F2');
-  const { tally, feed } = useLiveTally({
-    baseRevenue: BASE_REVENUE,
-    basePurchases: BASE_PURCHASES,
-    baseCalls: BASE_CALLS,
-    feedStartLeadNo: AMBIENT_FIRST_LEAD_NO,
-  });
   const [frame, setFrame] = useState<ReinvestmentFrame>(IDLE_REINVESTMENT_FRAME);
 
   const dependencies = useMemo<VisualizerDependencies>(
@@ -49,12 +30,6 @@ export default function LatticePage() {
     [],
   );
   const handleReady = useCallback(() => {}, []);
-
-  const completedCycles = Math.max(0, frame.cycle - 1);
-  const displayRevenue =
-    tally.revenue + completedCycles * REINVESTMENT_VALUE_USD + frame.collectedUsd;
-  const displayPurchases =
-    tally.purchases + completedCycles * PAYMENT_PARTICLE_COUNT + frame.collectedPayments;
 
   return (
     <main
@@ -74,32 +49,18 @@ export default function LatticePage() {
           transform: `scale(${fit})`,
           transformOrigin: 'center center',
           flexShrink: 0,
-          padding: `${PAD}px`,
-          boxSizing: 'border-box',
-          display: 'flex',
-          flexDirection: 'row',
-          gap: `${COL_GAP}px`,
           background: '#F7F8F7',
           position: 'relative',
         }}
       >
-        <ScoreboardRail
-          revenue={displayRevenue}
-          purchases={displayPurchases}
-          calls={tally.calls}
-          upsellPct={UPSELL_PCT}
-          feed={feed}
-          width={RAIL_W}
-        />
-
-        <section style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <section style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
           <LatticeCanvas onReady={handleReady} dependencies={dependencies} />
 
           <div
             style={{
               position: 'absolute',
-              left: 28,
-              top: 24,
+              left: 420,
+              top: 56,
               pointerEvents: 'none',
               zIndex: 3,
             }}

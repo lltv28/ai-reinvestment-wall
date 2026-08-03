@@ -69,9 +69,11 @@ export function asideCamera(width: number, height: number, cardSide: CardSide): 
 }
 
 export function triagerCamera(width: number, height: number): Camera {
+  const scale = 1.45;
+  const targetBrainX = width * (450 / 1920);
   return {
-    scale: 1.45,
-    lookAtX: width * (890 / 1440),
+    scale,
+    lookAtX: width / 2 + (width / 2 - targetBrainX) / scale,
     lookAtY: height / 2,
   };
 }

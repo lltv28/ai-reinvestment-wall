@@ -224,10 +224,11 @@ describe("identityCamera / asideCamera", () => {
   });
 
   it("zooms tightly into the AI Triagers slice", () => {
-    const camera = triagerCamera(1440, 1000);
+    const camera = triagerCamera(1920, 1080);
     expect(camera.scale).toBeCloseTo(1.45);
-    expect(camera.lookAtX).toBeCloseTo(890);
-    expect(camera.lookAtY).toBeCloseTo(500);
+    expect(camera.lookAtX).toBeCloseTo(1311.724);
+    expect(camera.lookAtY).toBeCloseTo(540);
+    expect(worldToScreen({ x: 960, y: 540 }, 1920, 1080, camera).x).toBeCloseTo(450);
   });
 });
 

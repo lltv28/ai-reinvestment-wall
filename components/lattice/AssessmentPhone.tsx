@@ -137,13 +137,13 @@ export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
       aria-hidden={!visible}
       style={{
         position: 'absolute',
-        right: 28,
+        right: 440,
         top: 150,
-        width: 330,
-        height: 700,
-        padding: 10,
+        width: 360,
+        height: 760,
+        padding: 11,
         boxSizing: 'border-box',
-        borderRadius: 46,
+        borderRadius: 50,
         background: '#151917',
         boxShadow: '0 28px 70px rgba(20,32,27,0.20), 0 8px 22px rgba(20,32,27,0.12)',
         opacity: visible ? 1 : 0,
@@ -164,7 +164,7 @@ export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
 
       <style jsx global>{`
         .speaker { position:absolute; z-index:3; top:17px; left:50%; width:92px; height:25px; border-radius:0 0 15px 15px; background:#151917; transform:translateX(-50%); }
-        .phone-screen { position:relative; height:100%; overflow:hidden; border-radius:37px; background:#fbfcfb; color:${C.ink}; }
+        .phone-screen { position:relative; height:100%; overflow:hidden; border-radius:40px; background:#fbfcfb; color:${C.ink}; }
         .phone-screen header { height:62px; display:flex; align-items:center; gap:9px; padding:0 19px; border-bottom:1px solid ${C.border}; background:rgba(255,255,255,.96); }
         .phone-screen header span { font-size:14px; font-weight:${W.semibold}; }
         .phone-screen header em { margin-left:auto; color:${C.faint}; font-style:normal; letter-spacing:2px; }
