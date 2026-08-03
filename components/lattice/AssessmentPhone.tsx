@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { C } from '@/lib/adStage';
 import {
   REINVESTMENT_TIMING,
+  triagerConnectionAt,
   type AssessmentPhoneScreen,
   type ReinvestmentFrame,
 } from '@/lib/lattice/reinvestment';
@@ -114,17 +114,10 @@ function MiniPhoneContent({ screen }: { screen: AssessmentPhoneScreen }) {
 
 export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
   const visible =
+    frame.connectionElapsedMs > 0 ||
     frame.cycle > 1 ||
     (frame.cycle === 1 && frame.elapsedMs >= REINVESTMENT_TIMING.phoneReveal);
-  const [motionElapsedMs, setMotionElapsedMs] = useState(0);
-
-  useEffect(() => {
-    if (!visible) return;
-    const interval = window.setInterval(() => {
-      setMotionElapsedMs((elapsedMs) => elapsedMs + 250);
-    }, 250);
-    return () => window.clearInterval(interval);
-  }, [visible]);
+  const connection = triagerConnectionAt(frame.connectionElapsedMs);
 
   return (
     <aside
@@ -148,11 +141,12 @@ export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
       }}
     >
       {Array.from({ length: PHONE_COUNT }, (_, index) => {
-        const phoneScreen = miniPhoneScreen(index, motionElapsedMs);
+        const phoneScreen = miniPhoneScreen(index, frame.connectionElapsedMs);
+        const connected = visible && index === connection.phoneIndex;
 
         return (
           <div
-            className="mini-phone"
+            className={`mini-phone${connected ? ' connected' : ''}`}
             key={index}
             style={{ transitionDelay: visible ? `${index * 35}ms` : '0ms' }}
           >
@@ -169,8 +163,9 @@ export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
       })}
 
       <style jsx global>{`
-        .mini-phone { position:relative; width:86px; height:142px; padding:4px; box-sizing:border-box; border-radius:16px; background:#151917; box-shadow:0 10px 22px rgba(20,32,27,.13), 0 2px 7px rgba(20,32,27,.1); opacity:0; transform:translateY(10px) scale(.94); transition:opacity 420ms ease, transform 520ms cubic-bezier(.16,1,.3,1); }
+        .mini-phone { position:relative; width:86px; height:142px; padding:4px; box-sizing:border-box; border-radius:16px; background:#151917; box-shadow:0 10px 22px rgba(20,32,27,.13), 0 2px 7px rgba(20,32,27,.1); opacity:0; transform:translateY(10px) scale(.94); transition:opacity 420ms ease, transform 520ms cubic-bezier(.16,1,.3,1), box-shadow 300ms ease; }
         [data-visible="true"] .mini-phone { opacity:1; transform:translateY(0) scale(1); }
+        [data-visible="true"] .mini-phone.connected { transform:translateY(-2px) scale(1.025); box-shadow:0 0 0 3px rgba(46,125,82,.24), 0 15px 30px rgba(20,32,27,.18); }
         .mini-speaker { position:absolute; z-index:3; top:4px; left:50%; width:24px; height:7px; border-radius:0 0 5px 5px; background:#151917; transform:translateX(-50%); }
         .mini-screen { position:relative; height:100%; overflow:hidden; border-radius:12px; background:#fbfcfb; color:${C.ink}; }
         .mini-screen header { height:18px; display:flex; align-items:center; gap:4px; padding:0 5px; border-bottom:1px solid ${C.border}; background:#fff; }

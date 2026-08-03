@@ -1,7 +1,7 @@
 import { createRandom } from "./random";
 import { buildLeadIdentities } from "./leads";
 import { buildRepLabel, SALES_REPS } from "./salesReps";
-import { AI_BRAIN_NODE_ID, AI_TRIAGER_NODE_ID } from "./reinvestment";
+import { AI_BRAIN_NODE_ID, AI_TRIAGER_COUNT, AI_TRIAGER_NODE_ID } from "./reinvestment";
 import { angleForIndex } from "./wheelLayout";
 import type { WheelGraph, WheelLink, WheelNode } from "./types";
 
@@ -12,7 +12,7 @@ export const ZONE_COUNT = 6;
 export const ICON_PER_ZONE = 11;
 export const AI_TRIAGER_AD_COUNT = ICON_PER_ZONE;
 export const TOTAL_ICON_COUNT = ZONE_COUNT * ICON_PER_ZONE;
-export const AVATAR_COUNT = 96;
+export const AVATAR_COUNT = AI_TRIAGER_COUNT * ZONE_COUNT;
 export const SATELLITE_PER_ICON = 2;
 
 const ZONE_COLORS = ["#2E7D52", "#597267", "#718079", "#14201B", "#789484", "#426B58"];

@@ -5,6 +5,9 @@ export const PROFIT_PER_AD_USD = 8;
 export const PAYMENT_PARTICLE_COUNT = 5;
 export const REINVESTMENT_VALUE_USD = PROFIT_PER_AD_USD * PAYMENT_PARTICLE_COUNT;
 export const GENERATED_LEAD_COUNT = 0;
+export const AI_TRIAGER_COUNT = 16;
+export const TRIAGER_PHONE_COUNT = 9;
+export const TRIAGER_CONNECTION_DURATION_MS = 1_250;
 
 export const REINVESTMENT_TIMING = {
   focusEnd: 2_000,
@@ -29,6 +32,7 @@ export type ReinvestmentPhase =
 export interface ReinvestmentFrame {
   phase: ReinvestmentPhase;
   elapsedMs: number;
+  connectionElapsedMs: number;
   phaseProgress: number;
   collectedUsd: number;
   collectedPayments: number;
@@ -61,6 +65,7 @@ export function reinvestmentFrame(elapsedMs: number, cycle: number): Reinvestmen
     return {
       phase: "idle",
       elapsedMs: 0,
+      connectionElapsedMs: 0,
       phaseProgress: 0,
       collectedUsd: 0,
       collectedPayments: 0,
@@ -129,11 +134,28 @@ export function reinvestmentFrame(elapsedMs: number, cycle: number): Reinvestmen
   return {
     phase,
     elapsedMs: Math.max(0, elapsedMs),
+    connectionElapsedMs: 0,
     phaseProgress,
     collectedUsd,
     collectedPayments,
     generatedLeads,
     cycle,
+  };
+}
+
+export function triagerConnectionAt(connectionElapsedMs: number): {
+  triagerIndex: number;
+  phoneIndex: number;
+  progress: number;
+} {
+  const elapsedMs = Math.max(0, connectionElapsedMs);
+  const absoluteIndex = Math.floor(elapsedMs / TRIAGER_CONNECTION_DURATION_MS);
+  const triagerIndex = absoluteIndex % AI_TRIAGER_COUNT;
+
+  return {
+    triagerIndex,
+    phoneIndex: triagerIndex % TRIAGER_PHONE_COUNT,
+    progress: (elapsedMs % TRIAGER_CONNECTION_DURATION_MS) / TRIAGER_CONNECTION_DURATION_MS,
   };
 }
 

@@ -7,6 +7,7 @@ import {
   PROFIT_PER_AD_USD,
   REINVESTMENT_TIMING,
   easeInOutCubic,
+  triagerConnectionAt,
   triagerRevenueUsd,
   type ReinvestmentFrame,
 } from "./reinvestment";
@@ -35,6 +36,31 @@ function interpolate(
     x: from.x + (to.x - from.x) * progress,
     y: from.y + (to.y - from.y) * progress,
   };
+}
+
+function pointAlongPolyline(
+  points: Array<{ x: number; y: number }>,
+  progress: number,
+): { x: number; y: number } {
+  if (points.length < 2) return points[0] ?? { x: 0, y: 0 };
+  const lengths = points.slice(1).map((point, index) => {
+    const previous = points[index]!;
+    return Math.hypot(point.x - previous.x, point.y - previous.y);
+  });
+  const totalLength = lengths.reduce((sum, length) => sum + length, 0);
+  let remaining = totalLength * clamp01(progress);
+
+  for (let index = 0; index < lengths.length; index += 1) {
+    const length = lengths[index]!;
+    const from = points[index]!;
+    const to = points[index + 1]!;
+    if (remaining <= length) {
+      return interpolate(from, to, length === 0 ? 0 : remaining / length);
+    }
+    remaining -= length;
+  }
+
+  return points[points.length - 1]!;
 }
 
 export interface Camera {
@@ -286,6 +312,75 @@ export class CanvasRenderer {
     ctx.globalAlpha = 1;
   }
 
+  private drawPolylineProgress(
+    points: Array<{ x: number; y: number }>,
+    progress: number,
+    alpha: number,
+    width: number,
+  ): void {
+    if (points.length < 2 || progress <= 0 || alpha <= 0) return;
+    const lengths = points.slice(1).map((point, index) => {
+      const previous = points[index]!;
+      return Math.hypot(point.x - previous.x, point.y - previous.y);
+    });
+    let remaining = lengths.reduce((sum, length) => sum + length, 0) * clamp01(progress);
+    const { ctx } = this;
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = PALETTE.flow;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(points[0]!.x, points[0]!.y);
+
+    for (let index = 0; index < lengths.length; index += 1) {
+      const length = lengths[index]!;
+      const from = points[index]!;
+      const to = points[index + 1]!;
+      if (remaining >= length) {
+        ctx.lineTo(to.x, to.y);
+        remaining -= length;
+        continue;
+      }
+      const end = interpolate(from, to, length === 0 ? 0 : remaining / length);
+      ctx.lineTo(end.x, end.y);
+      break;
+    }
+
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  private drawPolylineParticle(
+    points: Array<{ x: number; y: number }>,
+    progress: number,
+  ): void {
+    if (progress <= 0 || progress >= 1) return;
+    const eased = easeInOutCubic(progress);
+    const point = pointAlongPolyline(points, eased);
+    const trail = pointAlongPolyline(points, Math.max(0, eased - 0.08));
+    const { ctx } = this;
+
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = PALETTE.flow;
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(trail.x, trail.y);
+    ctx.lineTo(point.x, point.y);
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = PALETTE.flow;
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   private drawReinvestmentPaths(
     graph: WheelGraph,
     positionById: Map<string, { x: number; y: number }>,
@@ -324,29 +419,37 @@ export class CanvasRenderer {
           : frame.phaseProgress;
     this.drawLineProgress(triager, brain, easeInOutCubic(brainProgress), 0.9, 3);
 
-    const rlNode = graph.nodes.find(
-      (node) => node.ring === "avatar" && node.zoneIndex === 0 && node.initials === "RL",
-    );
-    const rlPosition = rlNode ? positionById.get(rlNode.id) : undefined;
-    const phoneProgress = clamp01(
-      (frame.elapsedMs - REINVESTMENT_TIMING.phoneReveal) / 650,
-    );
-    if (rlPosition && phoneProgress > 0) {
-      const rlScreen = worldToScreen(rlPosition, width, height, camera);
-      const phoneAnchor = screenToWorld(
-        width * (1128 / 1920),
-        rlScreen.y,
-        width,
-        height,
-        camera,
-      );
-      this.drawLineProgress(
-        rlPosition,
-        phoneAnchor,
-        easeInOutCubic(phoneProgress),
-        0.58,
-        1.7,
-      );
+    const connection = triagerConnectionAt(frame.connectionElapsedMs);
+    const avatarPositions = graph.nodes
+      .filter((node) => node.ring === "avatar" && node.zoneIndex === 0)
+      .map((node) => positionById.get(node.id))
+      .filter((position): position is { x: number; y: number } => Boolean(position))
+      .sort((a, b) => a.y - b.y);
+    const avatarPosition = avatarPositions[connection.triagerIndex];
+    if (avatarPosition && frame.connectionElapsedMs > 0) {
+      const column = connection.phoneIndex % 3;
+      const row = Math.floor(connection.phoneIndex / 3);
+      const laneX = width * ((1112 + column * 98) / 1920);
+      const routeY = height * (286 / 1080);
+      const phoneX = width * ((1128 + column * 98) / 1920);
+      const phoneY = height * ((374 + row * 156) / 1080);
+      const routeTop = screenToWorld(laneX, routeY, width, height, camera);
+      const routeSide = screenToWorld(laneX, phoneY, width, height, camera);
+      const phoneAnchor = screenToWorld(phoneX, phoneY, width, height, camera);
+      const connectorPoints = [avatarPosition, routeTop, routeSide, phoneAnchor];
+      const drawProgress = easeInOutCubic(clamp01(connection.progress / 0.28));
+      const fade = 1 - clamp01((connection.progress - 0.82) / 0.18);
+      const particleProgress = clamp01((connection.progress - 0.18) / 0.58);
+      const { ctx } = this;
+
+      ctx.globalAlpha = 0.1 * fade;
+      ctx.fillStyle = PALETTE.flow;
+      ctx.beginPath();
+      ctx.arc(avatarPosition.x, avatarPosition.y, 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      this.drawPolylineProgress(connectorPoints, drawProgress, 0.64 * fade, 1.9);
+      this.drawPolylineParticle(connectorPoints, particleProgress);
     }
   }
 

@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  AI_TRIAGER_COUNT,
   GENERATED_LEAD_COUNT,
   PAYMENT_PARTICLE_COUNT,
   REINVESTMENT_TIMING,
   REINVESTMENT_VALUE_USD,
+  TRIAGER_CONNECTION_DURATION_MS,
   assessmentPhoneScreen,
   easeInOutCubic,
   reinvestmentFrame,
+  triagerConnectionAt,
   triagerRevenueUsd,
 } from "./reinvestment";
 
@@ -52,5 +55,21 @@ describe("reinvestmentFrame", () => {
     expect(assessmentPhoneScreen(reinvestmentFrame(9_000, 1))).toBe("paid");
     expect(assessmentPhoneScreen(reinvestmentFrame(11_000, 1))).toBe("funding");
     expect(assessmentPhoneScreen(reinvestmentFrame(13_000, 1))).toBe("ready");
+  });
+
+  it("rotates through every AI Triager before repeating", () => {
+    const connections = Array.from({ length: AI_TRIAGER_COUNT }, (_, index) =>
+      triagerConnectionAt(index * TRIAGER_CONNECTION_DURATION_MS),
+    );
+
+    expect(connections.map((connection) => connection.triagerIndex)).toEqual(
+      Array.from({ length: AI_TRIAGER_COUNT }, (_, index) => index),
+    );
+    expect(connections.map((connection) => connection.phoneIndex)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1, 2, 3, 4, 5, 6,
+    ]);
+    expect(
+      triagerConnectionAt(AI_TRIAGER_COUNT * TRIAGER_CONNECTION_DURATION_MS).triagerIndex,
+    ).toBe(0);
   });
 });

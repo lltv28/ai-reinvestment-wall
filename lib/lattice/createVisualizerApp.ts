@@ -121,6 +121,8 @@ export function createVisualizerApp(
   let reinvestmentCycle = 0;
   let reinvestmentStartedAtMs: number | undefined;
   let reinvestmentSnapshot = IDLE_REINVESTMENT_FRAME;
+  let connectionElapsedMs = 0;
+  let connectionsStarted = false;
   let nextAutomaticReinvestmentMs = lastFrameTimeMs + 4_000;
   let lastPublishedReinvestmentKey = "";
 
@@ -169,16 +171,21 @@ export function createVisualizerApp(
     const valueBucket = Math.floor(reinvestmentSnapshot.collectedUsd / 50);
     const phoneVisible = reinvestmentSnapshot.elapsedMs >= REINVESTMENT_TIMING.phoneReveal;
     const phoneScreen = assessmentPhoneScreen(reinvestmentSnapshot);
-    const key = `${reinvestmentSnapshot.phase}:${phoneVisible}:${phoneScreen}:${valueBucket}:${reinvestmentSnapshot.generatedLeads}:${reinvestmentSnapshot.cycle}`;
+    const connectionTick = Math.floor(reinvestmentSnapshot.connectionElapsedMs / 100);
+    const key = `${reinvestmentSnapshot.phase}:${phoneVisible}:${phoneScreen}:${connectionTick}:${valueBucket}:${reinvestmentSnapshot.generatedLeads}:${reinvestmentSnapshot.cycle}`;
     if (!force && key === lastPublishedReinvestmentKey) return;
     lastPublishedReinvestmentKey = key;
     dependencies.onReinvestmentUpdate?.(reinvestmentSnapshot);
   }
 
+  function frameWithConnectionClock(frame: ReinvestmentFrame): ReinvestmentFrame {
+    return { ...frame, connectionElapsedMs };
+  }
+
   function startReinvestment(now = performance.now()): void {
     reinvestmentCycle += 1;
     reinvestmentStartedAtMs = now;
-    reinvestmentSnapshot = reinvestmentFrame(0, reinvestmentCycle);
+    reinvestmentSnapshot = frameWithConnectionClock(reinvestmentFrame(0, reinvestmentCycle));
     focusedNodeId = AI_TRIAGER_NODE_ID;
     publishReinvestment(true);
     renderNow();
@@ -332,6 +339,10 @@ export function createVisualizerApp(
     const deltaMs = now - lastFrameTimeMs;
     lastFrameTimeMs = now;
 
+    if (connectionsStarted) {
+      connectionElapsedMs += deltaMs;
+    }
+
     let changed = false;
 
     if (reinvestmentStartedAtMs === undefined && now >= nextAutomaticReinvestmentMs) {
@@ -341,16 +352,27 @@ export function createVisualizerApp(
 
     if (reinvestmentStartedAtMs !== undefined) {
       const elapsedMs = now - reinvestmentStartedAtMs;
-      reinvestmentSnapshot = reinvestmentFrame(elapsedMs, reinvestmentCycle);
+      if (!connectionsStarted && elapsedMs >= REINVESTMENT_TIMING.phoneReveal) {
+        connectionsStarted = true;
+      }
+      reinvestmentSnapshot = frameWithConnectionClock(
+        reinvestmentFrame(elapsedMs, reinvestmentCycle),
+      );
       publishReinvestment();
       changed = true;
       if (elapsedMs >= REINVESTMENT_TIMING.growEnd) {
-        reinvestmentSnapshot = reinvestmentFrame(REINVESTMENT_TIMING.growEnd, reinvestmentCycle);
+        reinvestmentSnapshot = frameWithConnectionClock(
+          reinvestmentFrame(REINVESTMENT_TIMING.growEnd, reinvestmentCycle),
+        );
         reinvestmentStartedAtMs = undefined;
         focusedNodeId = AI_TRIAGER_NODE_ID;
         nextAutomaticReinvestmentMs = now + 5_000;
         publishReinvestment(true);
       }
+    } else if (connectionsStarted) {
+      reinvestmentSnapshot = frameWithConnectionClock(reinvestmentSnapshot);
+      publishReinvestment();
+      changed = true;
     }
 
     if (!paused && growthSchedule) {

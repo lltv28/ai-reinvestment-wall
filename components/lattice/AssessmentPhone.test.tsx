@@ -1,5 +1,5 @@
-import { act, render } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { render } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import { reinvestmentFrame } from '@/lib/lattice/reinvestment';
 import { AssessmentPhone } from './AssessmentPhone';
 
@@ -10,18 +10,17 @@ function phoneScreens(container: HTMLElement): string[] {
 }
 
 describe('AssessmentPhone', () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it('advances only some phones at each staggered motion tick', () => {
-    vi.useFakeTimers();
-    const { container } = render(
+    const { container, rerender } = render(
       <AssessmentPhone frame={reinvestmentFrame(2_500, 1)} />,
     );
     const before = phoneScreens(container);
 
-    act(() => vi.advanceTimersByTime(500));
+    rerender(
+      <AssessmentPhone
+        frame={{ ...reinvestmentFrame(2_500, 1), connectionElapsedMs: 500 }}
+      />,
+    );
     const after = phoneScreens(container);
     const changedPhones = after.filter((screen, index) => screen !== before[index]);
 
@@ -31,14 +30,17 @@ describe('AssessmentPhone', () => {
   });
 
   it('keeps every phone fully visible and moving during payment', () => {
-    vi.useFakeTimers();
-    const { container } = render(
+    const { container, rerender } = render(
       <AssessmentPhone frame={reinvestmentFrame(9_500, 1)} />,
     );
     const before = phoneScreens(container);
     const aside = container.querySelector('aside') as HTMLElement;
 
-    act(() => vi.advanceTimersByTime(3_000));
+    rerender(
+      <AssessmentPhone
+        frame={{ ...reinvestmentFrame(9_500, 1), connectionElapsedMs: 3_000 }}
+      />,
+    );
 
     expect(aside.style.opacity).toBe('1');
     expect(phoneScreens(container)).not.toEqual(before);
@@ -50,5 +52,17 @@ describe('AssessmentPhone', () => {
     );
 
     expect((container.querySelector('aside') as HTMLElement).style.opacity).toBe('1');
+  });
+
+  it('glows only the phone selected by the rotating connection', () => {
+    const { container } = render(
+      <AssessmentPhone
+        frame={{ ...reinvestmentFrame(5_000, 1), connectionElapsedMs: 2_600 }}
+      />,
+    );
+    const connectedPhones = container.querySelectorAll('.mini-phone.connected');
+
+    expect(connectedPhones).toHaveLength(1);
+    expect(Array.from(container.querySelectorAll('.mini-phone')).indexOf(connectedPhones[0]!)).toBe(2);
   });
 });
