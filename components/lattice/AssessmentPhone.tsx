@@ -1,9 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { C } from '@/lib/adStage';
 import {
   REINVESTMENT_TIMING,
-  assessmentPhoneScreen,
   type AssessmentPhoneScreen,
   type ReinvestmentFrame,
 } from '@/lib/lattice/reinvestment';
@@ -21,29 +21,17 @@ const PHONE_STAGE_DELAYS_MS = [0, 170, 340, 510, 680, 850, 1_020, 1_190, 1_360] 
 const PHONE_START_STAGES = [0, 2, 1, 3, 4, 1, 0, 4, 2] as const;
 
 function miniPhoneScreen(
-  frame: ReinvestmentFrame,
   phoneIndex: number,
+  motionElapsedMs: number,
 ): AssessmentPhoneScreen {
-  const currentScreen = assessmentPhoneScreen(frame);
-  if (
-    frame.elapsedMs < REINVESTMENT_TIMING.phoneReveal ||
-    currentScreen === 'paid' ||
-    currentScreen === 'funding' ||
-    currentScreen === 'ready'
-  ) {
-    return currentScreen;
-  }
-
-  const scheduleIndex = (phoneIndex + frame.cycle * 2) % PHONE_COUNT;
-  const activeElapsedMs = frame.elapsedMs - REINVESTMENT_TIMING.phoneReveal;
-  const stageDelayMs = PHONE_STAGE_DELAYS_MS[scheduleIndex] ?? 0;
-  const initialStage = PHONE_START_STAGES[scheduleIndex] ?? 0;
+  const stageDelayMs = PHONE_STAGE_DELAYS_MS[phoneIndex] ?? 0;
+  const initialStage = PHONE_START_STAGES[phoneIndex] ?? 0;
   const completedStages = Math.floor(
-    (activeElapsedMs + stageDelayMs) / PHONE_STAGE_DURATION_MS,
+    (motionElapsedMs + stageDelayMs) / PHONE_STAGE_DURATION_MS,
   );
   const stageIndex = (initialStage + completedStages) % ASSESSMENT_STAGES.length;
 
-  return ASSESSMENT_STAGES[stageIndex] ?? currentScreen;
+  return ASSESSMENT_STAGES[stageIndex] ?? 'landing';
 }
 
 function MiniPhoneContent({ screen }: { screen: AssessmentPhoneScreen }) {
@@ -125,8 +113,18 @@ function MiniPhoneContent({ screen }: { screen: AssessmentPhoneScreen }) {
 }
 
 export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
-  const visible = frame.elapsedMs >= REINVESTMENT_TIMING.phoneReveal;
-  const flowFocused = ['brain', 'ads', 'grow', 'complete'].includes(frame.phase);
+  const visible =
+    frame.cycle > 1 ||
+    (frame.cycle === 1 && frame.elapsedMs >= REINVESTMENT_TIMING.phoneReveal);
+  const [motionElapsedMs, setMotionElapsedMs] = useState(0);
+
+  useEffect(() => {
+    if (!visible) return;
+    const interval = window.setInterval(() => {
+      setMotionElapsedMs((elapsedMs) => elapsedMs + 250);
+    }, 250);
+    return () => window.clearInterval(interval);
+  }, [visible]);
 
   return (
     <aside
@@ -142,20 +140,15 @@ export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
         gridTemplateColumns: 'repeat(3, 86px)',
         gridTemplateRows: 'repeat(3, 142px)',
         gap: '14px 12px',
-        opacity: visible ? (flowFocused ? 0.1 : 1) : 0,
-        transform: visible
-          ? flowFocused
-            ? 'translateY(0) scale(0.98)'
-            : 'translateY(0) scale(1)'
-          : 'translateY(18px) scale(0.97)',
-        filter: flowFocused ? 'saturate(0.35)' : 'none',
-        transition: 'opacity 500ms ease, transform 650ms cubic-bezier(0.16, 1, 0.3, 1), filter 500ms ease',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0) scale(1)' : 'translateY(18px) scale(0.97)',
+        transition: 'opacity 500ms ease, transform 650ms cubic-bezier(0.16, 1, 0.3, 1)',
         pointerEvents: 'none',
         zIndex: 6,
       }}
     >
       {Array.from({ length: PHONE_COUNT }, (_, index) => {
-        const phoneScreen = miniPhoneScreen(frame, index);
+        const phoneScreen = miniPhoneScreen(index, motionElapsedMs);
 
         return (
           <div
@@ -166,7 +159,7 @@ export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
             <div className="mini-speaker" />
             <div className="mini-screen">
               <header><span>K</span><i /></header>
-              <div key={`${phoneScreen}-${frame.cycle}`} className="mini-content">
+              <div key={phoneScreen} className="mini-content">
                 <MiniPhoneContent screen={phoneScreen} />
               </div>
               <div className="mini-home" />
