@@ -20,6 +20,9 @@ const LatticeCanvas = dynamic(
   { ssr: false },
 );
 
+const OVERVIEW_ZOOM = 1.12;
+const TRIAGER_ZOOM = 1.3;
+
 export default function LatticePage() {
   const fit = useFitStage();
   useRecordingChrome('#F1F4F2');
@@ -30,6 +33,7 @@ export default function LatticePage() {
     [],
   );
   const handleReady = useCallback(() => {}, []);
+  const sceneZoom = frame.phase === 'idle' ? OVERVIEW_ZOOM : TRIAGER_ZOOM;
 
   return (
     <main
@@ -53,7 +57,18 @@ export default function LatticePage() {
           position: 'relative',
         }}
       >
-        <section style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+        <section
+          style={{
+            width: '100%',
+            height: '100%',
+            position: 'relative',
+            overflow: 'hidden',
+            transform: `scale(${sceneZoom})`,
+            transformOrigin: 'center center',
+            transition: 'transform 900ms cubic-bezier(0.16, 1, 0.3, 1)',
+            willChange: 'transform',
+          }}
+        >
           <LatticeCanvas onReady={handleReady} dependencies={dependencies} />
           <AssessmentPhone frame={frame} />
         </section>
