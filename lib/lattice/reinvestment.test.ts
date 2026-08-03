@@ -4,6 +4,7 @@ import {
   PAYMENT_PARTICLE_COUNT,
   REINVESTMENT_TIMING,
   REINVESTMENT_VALUE_USD,
+  assessmentPhoneScreen,
   easeInOutCubic,
   reinvestmentFrame,
   triagerRevenueUsd,
@@ -39,5 +40,17 @@ describe("reinvestmentFrame", () => {
     expect(triagerRevenueUsd(reinvestmentFrame(12_200, 1))).toBe(8);
     expect(triagerRevenueUsd(reinvestmentFrame(12_950, 1))).toBe(40);
     expect(triagerRevenueUsd(reinvestmentFrame(REINVESTMENT_TIMING.adsEnd, 1))).toBe(40);
+  });
+
+  it("advances the phone through each screen at its intended moment", () => {
+    expect(assessmentPhoneScreen(reinvestmentFrame(REINVESTMENT_TIMING.phoneReveal, 1))).toBe(
+      "landing",
+    );
+    expect(assessmentPhoneScreen(reinvestmentFrame(3_000, 1))).toBe("question");
+    expect(assessmentPhoneScreen(reinvestmentFrame(4_900, 1))).toBe("plan");
+    expect(assessmentPhoneScreen(reinvestmentFrame(7_000, 1))).toBe("checkout");
+    expect(assessmentPhoneScreen(reinvestmentFrame(9_000, 1))).toBe("paid");
+    expect(assessmentPhoneScreen(reinvestmentFrame(11_000, 1))).toBe("funding");
+    expect(assessmentPhoneScreen(reinvestmentFrame(13_000, 1))).toBe("ready");
   });
 });

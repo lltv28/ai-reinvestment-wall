@@ -6,6 +6,7 @@ import {
   AI_TRIAGER_NODE_ID,
   IDLE_REINVESTMENT_FRAME,
   REINVESTMENT_TIMING,
+  assessmentPhoneScreen,
   reinvestmentFrame,
   type ReinvestmentFrame,
 } from "./reinvestment";
@@ -167,7 +168,8 @@ export function createVisualizerApp(
   function publishReinvestment(force = false): void {
     const valueBucket = Math.floor(reinvestmentSnapshot.collectedUsd / 50);
     const phoneVisible = reinvestmentSnapshot.elapsedMs >= REINVESTMENT_TIMING.phoneReveal;
-    const key = `${reinvestmentSnapshot.phase}:${phoneVisible}:${valueBucket}:${reinvestmentSnapshot.generatedLeads}:${reinvestmentSnapshot.cycle}`;
+    const phoneScreen = assessmentPhoneScreen(reinvestmentSnapshot);
+    const key = `${reinvestmentSnapshot.phase}:${phoneVisible}:${phoneScreen}:${valueBucket}:${reinvestmentSnapshot.generatedLeads}:${reinvestmentSnapshot.cycle}`;
     if (!force && key === lastPublishedReinvestmentKey) return;
     lastPublishedReinvestmentKey = key;
     dependencies.onReinvestmentUpdate?.(reinvestmentSnapshot);

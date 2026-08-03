@@ -3,22 +3,10 @@
 import { C, R, W } from '@/lib/adStage';
 import {
   REINVESTMENT_TIMING,
+  assessmentPhoneScreen,
+  type AssessmentPhoneScreen,
   type ReinvestmentFrame,
 } from '@/lib/lattice/reinvestment';
-
-type PhoneScreen = 'landing' | 'question' | 'plan' | 'checkout' | 'paid' | 'funding' | 'ready';
-
-function screenFor(frame: ReinvestmentFrame): PhoneScreen {
-  if (frame.phase === 'focus' || frame.phase === 'idle') return 'landing';
-  if (frame.phase === 'collect') {
-    if (frame.phaseProgress < 0.2) return 'landing';
-    return frame.phaseProgress < 0.58 ? 'question' : 'plan';
-  }
-  if (frame.phase === 'aggregate') return 'checkout';
-  if (frame.phase === 'brain') return 'paid';
-  if (frame.phase === 'ads') return 'funding';
-  return 'ready';
-}
 
 const pillStyle = {
   border: `1px solid ${C.border}`,
@@ -30,7 +18,7 @@ const pillStyle = {
   lineHeight: 1.25,
 } as const;
 
-function PhoneContent({ screen }: { screen: PhoneScreen }) {
+function PhoneContent({ screen }: { screen: AssessmentPhoneScreen }) {
   if (screen === 'landing') {
     return (
       <>
@@ -136,7 +124,7 @@ function PhoneContent({ screen }: { screen: PhoneScreen }) {
 
 export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
   const visible = frame.elapsedMs >= REINVESTMENT_TIMING.phoneReveal;
-  const screen = screenFor(frame);
+  const screen = assessmentPhoneScreen(frame);
 
   return (
     <aside

@@ -36,6 +36,15 @@ export interface ReinvestmentFrame {
   cycle: number;
 }
 
+export type AssessmentPhoneScreen =
+  | "landing"
+  | "question"
+  | "plan"
+  | "checkout"
+  | "paid"
+  | "funding"
+  | "ready";
+
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
 function progressBetween(elapsedMs: number, startMs: number, endMs: number): number {
@@ -126,6 +135,18 @@ export function reinvestmentFrame(elapsedMs: number, cycle: number): Reinvestmen
     generatedLeads,
     cycle,
   };
+}
+
+export function assessmentPhoneScreen(frame: ReinvestmentFrame): AssessmentPhoneScreen {
+  if (frame.phase === "focus" || frame.phase === "idle") return "landing";
+  if (frame.phase === "collect") {
+    if (frame.phaseProgress < 0.2) return "landing";
+    return frame.phaseProgress < 0.58 ? "question" : "plan";
+  }
+  if (frame.phase === "aggregate") return "checkout";
+  if (frame.phase === "brain") return "paid";
+  if (frame.phase === "ads") return "funding";
+  return "ready";
 }
 
 export function triagerRevenueUsd(frame: ReinvestmentFrame): number {
