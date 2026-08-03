@@ -229,6 +229,7 @@ export class CanvasRenderer {
 
     if (reinvestment && reinvestment.phase !== "idle") {
       this.drawReinvestmentPaths(graph, positionById, reinvestment);
+      this.drawReinvestmentParticles(graph, positionById, width, height, reinvestment);
     }
 
     for (const node of graph.nodes) {
@@ -245,9 +246,6 @@ export class CanvasRenderer {
         this.drawNode(node, position);
         this.drawFadedNode(position, focusStrength);
       }
-    }
-    if (reinvestment && reinvestment.phase !== "idle") {
-      this.drawReinvestmentParticles(graph, positionById, width, height, reinvestment);
     }
     ctx.globalAlpha = 1;
     ctx.restore();
@@ -284,22 +282,22 @@ export class CanvasRenderer {
     if (!triager || !brain) return;
 
     const pairs = this.transactionPairs(graph, positionById);
-    const saleProgress =
-      frame.elapsedMs < REINVESTMENT_TIMING.aggregateEnd
-        ? 0
-        : frame.elapsedMs >= REINVESTMENT_TIMING.brainEnd
-          ? 1
-          : frame.phaseProgress;
-    const returnProgress =
-      frame.elapsedMs < REINVESTMENT_TIMING.brainEnd
-        ? 0
-        : frame.elapsedMs >= REINVESTMENT_TIMING.adsEnd
-          ? 1
-          : frame.phaseProgress;
-    for (const pair of pairs) {
+    pairs.forEach((pair, index) => {
+      const saleProgress =
+        frame.elapsedMs < REINVESTMENT_TIMING.aggregateEnd
+          ? 0
+          : frame.elapsedMs >= REINVESTMENT_TIMING.brainEnd
+            ? 1
+            : clamp01((frame.phaseProgress - index * 0.1) / 0.56);
+      const returnProgress =
+        frame.elapsedMs < REINVESTMENT_TIMING.brainEnd
+          ? 0
+          : frame.elapsedMs >= REINVESTMENT_TIMING.adsEnd
+            ? 1
+            : clamp01((frame.phaseProgress - index * 0.09) / 0.6);
       this.drawLineProgress(pair.lead, pair.ad, easeInOutCubic(saleProgress), 0.34, 1.5);
       this.drawLineProgress(pair.ad, triager, easeInOutCubic(returnProgress), 0.55, 1.8);
-    }
+    });
 
     const brainProgress =
       frame.elapsedMs < REINVESTMENT_TIMING.adsEnd
@@ -347,19 +345,19 @@ export class CanvasRenderer {
     const point = interpolate(from, to, eased);
     const trailStart = interpolate(from, to, Math.max(0, eased - 0.12));
 
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = 0.28;
     ctx.strokeStyle = PALETTE.flow;
-    ctx.lineWidth = radius * 1.4;
+    ctx.lineWidth = radius;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(trailStart.x, trailStart.y);
     ctx.lineTo(point.x, point.y);
     ctx.stroke();
 
-    ctx.globalAlpha = 0.14;
+    ctx.globalAlpha = 0.1;
     ctx.fillStyle = PALETTE.flow;
     ctx.beginPath();
-    ctx.arc(point.x, point.y, radius * 2.5, 0, Math.PI * 2);
+    ctx.arc(point.x, point.y, radius * 1.75, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
     ctx.beginPath();
@@ -383,14 +381,14 @@ export class CanvasRenderer {
     if (frame.phase === "brain") {
       pairs.forEach((pair, index) => {
         const localProgress = clamp01((frame.phaseProgress - index * 0.1) / 0.56);
-        this.drawParticle(pair.lead, pair.ad, localProgress, 4.8);
+        this.drawParticle(pair.lead, pair.ad, localProgress, 4.6);
       });
     }
 
     if (frame.phase === "ads") {
       pairs.forEach((pair, index) => {
         const localProgress = clamp01((frame.phaseProgress - index * 0.09) / 0.6);
-        this.drawParticle(pair.ad, triager, localProgress, 5.5);
+        this.drawParticle(pair.ad, triager, localProgress, 4.8);
 
         const floatProgress = clamp01((frame.phaseProgress - index * 0.09) / 0.5);
         if (floatProgress <= 0) return;
@@ -416,7 +414,7 @@ export class CanvasRenderer {
     }
 
     if (frame.phase === "grow") {
-      this.drawParticle(triager, brain, frame.phaseProgress, 8);
+      this.drawParticle(triager, brain, frame.phaseProgress, 6.5);
     }
   }
 
