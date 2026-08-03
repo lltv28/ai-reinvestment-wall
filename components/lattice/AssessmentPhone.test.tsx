@@ -38,7 +38,7 @@ describe('AssessmentPhone', () => {
     const before = phoneScreens(container);
     const aside = container.querySelector('aside') as HTMLElement;
 
-    act(() => vi.advanceTimersByTime(1_500));
+    act(() => vi.advanceTimersByTime(3_000));
 
     expect(aside.style.opacity).toBe('1');
     expect(phoneScreens(container)).not.toEqual(before);

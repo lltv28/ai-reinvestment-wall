@@ -16,8 +16,8 @@ const ASSESSMENT_STAGES: AssessmentPhoneScreen[] = [
   'checkout',
   'paid',
 ];
-const PHONE_STAGE_DURATION_MS = 1_500;
-const PHONE_STAGE_DELAYS_MS = [0, 170, 340, 510, 680, 850, 1_020, 1_190, 1_360] as const;
+const PHONE_STAGE_DURATION_MS = 3_000;
+const PHONE_STAGE_DELAYS_MS = [0, 333, 666, 999, 1_332, 1_665, 1_998, 2_331, 2_664] as const;
 const PHONE_START_STAGES = [0, 2, 1, 3, 4, 1, 0, 4, 2] as const;
 
 function miniPhoneScreen(
