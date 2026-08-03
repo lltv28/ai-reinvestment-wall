@@ -9,9 +9,9 @@ const clamp = (value: number, minimum: number, maximum: number): number =>
   Math.min(maximum, Math.max(minimum, value));
 
 export const ZONE_COUNT = 6;
-export const ICON_PER_ZONE = 22;
-export const AI_TRIAGER_AD_COUNT = 11;
-export const TOTAL_ICON_COUNT = AI_TRIAGER_AD_COUNT + (ZONE_COUNT - 1) * ICON_PER_ZONE;
+export const ICON_PER_ZONE = 11;
+export const AI_TRIAGER_AD_COUNT = ICON_PER_ZONE;
+export const TOTAL_ICON_COUNT = ZONE_COUNT * ICON_PER_ZONE;
 export const AVATAR_COUNT = 96;
 export const SATELLITE_PER_ICON = 2;
 

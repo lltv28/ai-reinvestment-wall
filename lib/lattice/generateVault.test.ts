@@ -42,7 +42,7 @@ describe("generateVault", () => {
     expect(new Set(hubs.map((node) => node.zoneIndex))).toEqual(new Set([0, 1, 2, 3, 4, 5]));
   });
 
-  it("uses 11 ad boxes for AI Triagers and 22 icons for every other zone", () => {
+  it("uses exactly 11 square boxes in every zone", () => {
     const graph = generateVault({ nodeCount: 80, linkDensity: 0.1, seed: 1 });
     const hubs = graph.nodes.filter((node) => node.ring === "hub");
     const icons = graph.nodes.filter((node) => node.ring === "icon");
