@@ -127,4 +127,16 @@ export function reinvestmentFrame(elapsedMs: number, cycle: number): Reinvestmen
   };
 }
 
+export function triagerRevenueUsd(frame: ReinvestmentFrame): number {
+  if (frame.elapsedMs < REINVESTMENT_TIMING.brainEnd) return 0;
+  if (frame.elapsedMs >= REINVESTMENT_TIMING.adsEnd) return REINVESTMENT_VALUE_USD;
+
+  const completedReturns = Array.from({ length: PAYMENT_PARTICLE_COUNT }, (_, index) => {
+    const localProgress = clamp01((frame.phaseProgress - index * 0.09) / 0.6);
+    return localProgress >= 1 ? 1 : 0;
+  }).reduce<number>((total, completed) => total + completed, 0);
+
+  return completedReturns * PROFIT_PER_AD_USD;
+}
+
 export const IDLE_REINVESTMENT_FRAME: ReinvestmentFrame = reinvestmentFrame(-1, 0);

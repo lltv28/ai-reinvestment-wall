@@ -6,6 +6,7 @@ import {
   REINVESTMENT_VALUE_USD,
   easeInOutCubic,
   reinvestmentFrame,
+  triagerRevenueUsd,
 } from "./reinvestment";
 
 describe("reinvestmentFrame", () => {
@@ -31,5 +32,12 @@ describe("reinvestmentFrame", () => {
     expect(easeInOutCubic(-1)).toBe(0);
     expect(easeInOutCubic(0.5)).toBeCloseTo(0.5);
     expect(easeInOutCubic(2)).toBe(1);
+  });
+
+  it("increments the AI Triagers revenue by $8 as each return arrives", () => {
+    expect(triagerRevenueUsd(reinvestmentFrame(REINVESTMENT_TIMING.brainEnd, 1))).toBe(0);
+    expect(triagerRevenueUsd(reinvestmentFrame(12_200, 1))).toBe(8);
+    expect(triagerRevenueUsd(reinvestmentFrame(12_950, 1))).toBe(40);
+    expect(triagerRevenueUsd(reinvestmentFrame(REINVESTMENT_TIMING.adsEnd, 1))).toBe(40);
   });
 });

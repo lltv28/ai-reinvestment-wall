@@ -7,6 +7,7 @@ import {
   PROFIT_PER_AD_USD,
   REINVESTMENT_TIMING,
   easeInOutCubic,
+  triagerRevenueUsd,
   type ReinvestmentFrame,
 } from "./reinvestment";
 
@@ -247,6 +248,9 @@ export class CanvasRenderer {
         this.drawFadedNode(position, focusStrength);
       }
     }
+    if (reinvestment && reinvestment.phase !== "idle") {
+      this.drawTriagerRevenue(positionById, reinvestment);
+    }
     ctx.globalAlpha = 1;
     ctx.restore();
   }
@@ -426,6 +430,22 @@ export class CanvasRenderer {
     ctx.arc(position.x, position.y, FADE_NODE_RADIUS, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
+  }
+
+  private drawTriagerRevenue(
+    positionById: Map<string, { x: number; y: number }>,
+    frame: ReinvestmentFrame,
+  ): void {
+    const triager = positionById.get(AI_TRIAGER_NODE_ID);
+    if (!triager) return;
+
+    const { ctx } = this;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "600 13px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`$${triagerRevenueUsd(frame)}`, triager.x, triager.y + 0.5);
   }
 
   private drawNode(node: WheelNode, position: { x: number; y: number }): void {
