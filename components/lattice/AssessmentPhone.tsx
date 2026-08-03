@@ -154,7 +154,7 @@ export function AssessmentPhone({ frame }: { frame: ReinvestmentFrame }) {
         boxShadow: '0 28px 70px rgba(20,32,27,0.20), 0 8px 22px rgba(20,32,27,0.12)',
         opacity: visible ? 1 : 0,
         transform: visible ? 'translateY(0) scale(1)' : 'translateY(24px) scale(0.97)',
-        transition: 'opacity 700ms ease, transform 900ms cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'opacity 650ms ease, transform 650ms cubic-bezier(0.16, 1, 0.3, 1)',
         pointerEvents: 'none',
         zIndex: 6,
       }}

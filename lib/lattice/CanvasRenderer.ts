@@ -329,7 +329,7 @@ export class CanvasRenderer {
     );
     const rlPosition = rlNode ? positionById.get(rlNode.id) : undefined;
     const phoneProgress = clamp01(
-      (frame.elapsedMs - REINVESTMENT_TIMING.phoneReveal) / 900,
+      (frame.elapsedMs - REINVESTMENT_TIMING.phoneReveal) / 650,
     );
     if (rlPosition && phoneProgress > 0) {
       const rlScreen = worldToScreen(rlPosition, width, height, camera);
@@ -492,7 +492,7 @@ export class CanvasRenderer {
     frame: ReinvestmentFrame,
   ): void {
     const revealProgress = clamp01(
-      (frame.elapsedMs - REINVESTMENT_TIMING.phoneReveal) / 700,
+      (frame.elapsedMs - REINVESTMENT_TIMING.phoneReveal) / 450,
     );
     if (revealProgress <= 0) return;
 
