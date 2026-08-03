@@ -259,6 +259,7 @@ export class CanvasRenderer {
     }
     if (reinvestment && reinvestment.phase !== "idle") {
       this.drawTriagerRevenue(positionById, reinvestment);
+      this.drawTriagerLabel(graph, positionById, reinvestment);
     }
     ctx.globalAlpha = 1;
     ctx.restore();
@@ -485,6 +486,65 @@ export class CanvasRenderer {
     ctx.fillText(`$${triagerRevenueUsd(frame)}`, triager.x, triager.y + 0.5);
   }
 
+  private drawTriagerLabel(
+    graph: WheelGraph,
+    positionById: Map<string, { x: number; y: number }>,
+    frame: ReinvestmentFrame,
+  ): void {
+    const revealProgress = clamp01(
+      (frame.elapsedMs - REINVESTMENT_TIMING.phoneReveal) / 700,
+    );
+    if (revealProgress <= 0) return;
+
+    const triagerPositions = graph.nodes
+      .filter((node) => node.ring === "avatar" && node.zoneIndex === 0)
+      .map((node) => positionById.get(node.id))
+      .filter((position): position is { x: number; y: number } => Boolean(position));
+    if (triagerPositions.length === 0) return;
+
+    const labelX =
+      triagerPositions.reduce((sum, position) => sum + position.x, 0) /
+      triagerPositions.length;
+    const labelY = Math.min(...triagerPositions.map((position) => position.y)) - 32;
+    const easedProgress = easeInOutCubic(revealProgress);
+    const cardWidth = 116;
+    const cardHeight = 34;
+
+    const { ctx } = this;
+    ctx.save();
+    ctx.globalAlpha = easedProgress;
+    ctx.translate(0, (1 - easedProgress) * 8);
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "rgba(20, 32, 27, 0.16)";
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 4;
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(
+        labelX - cardWidth / 2,
+        labelY - cardHeight / 2,
+        cardWidth,
+        cardHeight,
+        9,
+      );
+    } else {
+      ctx.rect(
+        labelX - cardWidth / 2,
+        labelY - cardHeight / 2,
+        cardWidth,
+        cardHeight,
+      );
+    }
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.fillStyle = PALETTE.hubLabelText;
+    ctx.font = "600 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("AI Triagers", labelX, labelY);
+    ctx.restore();
+  }
+
   private drawNode(node: WheelNode, position: { x: number; y: number }): void {
     const { ctx } = this;
 
@@ -541,33 +601,6 @@ export class CanvasRenderer {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(node.initials, position.x, position.y);
-      }
-      if (node.ring === "hub" && node.label && node.id === AI_TRIAGER_NODE_ID) {
-        // Hubs sit close together on a small inner ring, so a label drawn
-        // straight below every hub collides with its neighbors. Push each
-        // label outward along its own hub's angle instead, fanning the 6
-        // labels apart in 6 different directions.
-        const labelOffset = node.radius + 14;
-        const labelX = position.x + Math.cos(node.angle) * labelOffset;
-        const labelY = position.y + Math.sin(node.angle) * labelOffset;
-        ctx.save();
-        ctx.fillStyle = "#ffffff";
-        ctx.shadowColor = "rgba(20, 32, 27, 0.13)";
-        ctx.shadowBlur = 14;
-        ctx.shadowOffsetY = 4;
-        ctx.beginPath();
-        if (typeof ctx.roundRect === "function") {
-          ctx.roundRect(labelX - 10, labelY - 17, 112, 34, 9);
-        } else {
-          ctx.rect(labelX - 10, labelY - 17, 112, 34);
-        }
-        ctx.fill();
-        ctx.restore();
-        ctx.fillStyle = PALETTE.hubLabelText;
-        ctx.font = "600 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
-        ctx.textAlign = Math.cos(node.angle) >= 0 ? "left" : "right";
-        ctx.textBaseline = "middle";
-        ctx.fillText(node.label, labelX, labelY);
       }
       return;
     }
