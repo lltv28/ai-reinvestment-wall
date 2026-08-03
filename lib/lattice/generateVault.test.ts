@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   applyDegreeSizing,
+  AI_TRIAGER_AD_COUNT,
   AVATAR_COUNT,
   generateVault,
   ICON_PER_ZONE,
   SATELLITE_PER_ICON,
+  TOTAL_ICON_COUNT,
   ZONE_COUNT,
 } from "./generateVault";
 import { buildLeadIdentities } from "./leads";
@@ -16,7 +18,7 @@ describe("generateVault", () => {
     expect(graph.nodes).toHaveLength(
       1 +
         ZONE_COUNT +
-        ZONE_COUNT * ICON_PER_ZONE * (1 + SATELLITE_PER_ICON) +
+        TOTAL_ICON_COUNT * (1 + SATELLITE_PER_ICON) +
         AVATAR_COUNT +
         150,
     );
@@ -40,11 +42,15 @@ describe("generateVault", () => {
     expect(new Set(hubs.map((node) => node.zoneIndex))).toEqual(new Set([0, 1, 2, 3, 4, 5]));
   });
 
-  it("has exactly ICON_PER_ZONE*ZONE_COUNT icon nodes, evenly split per zone, each colored to match its zone's hub", () => {
+  it("uses 11 ad boxes for AI Triagers and 22 icons for every other zone", () => {
     const graph = generateVault({ nodeCount: 80, linkDensity: 0.1, seed: 1 });
     const hubs = graph.nodes.filter((node) => node.ring === "hub");
     const icons = graph.nodes.filter((node) => node.ring === "icon");
-    expect(icons).toHaveLength(ZONE_COUNT * ICON_PER_ZONE);
+    expect(icons).toHaveLength(TOTAL_ICON_COUNT);
+    expect(icons.filter((node) => node.zoneIndex === 0)).toHaveLength(AI_TRIAGER_AD_COUNT);
+    for (let zoneIndex = 1; zoneIndex < ZONE_COUNT; zoneIndex += 1) {
+      expect(icons.filter((node) => node.zoneIndex === zoneIndex)).toHaveLength(ICON_PER_ZONE);
+    }
     for (const icon of icons) {
       const hub = hubs.find((h) => h.zoneIndex === icon.zoneIndex);
       expect(icon.color).toBe(hub?.color);
@@ -69,7 +75,7 @@ describe("generateVault", () => {
     const graph = generateVault({ nodeCount: 80, linkDensity: 0.1, seed: 1 });
     const icons = graph.nodes.filter((node) => node.ring === "icon");
     const satellites = graph.nodes.filter((node) => node.ring === "satellite");
-    expect(satellites).toHaveLength(ZONE_COUNT * ICON_PER_ZONE * SATELLITE_PER_ICON);
+    expect(satellites).toHaveLength(TOTAL_ICON_COUNT * SATELLITE_PER_ICON);
 
     for (const icon of icons) {
       const satelliteLinks = graph.links.filter(
@@ -119,7 +125,8 @@ describe("generateVault", () => {
         (link) => link.sourceId === `hub-${zoneIndex}` || link.targetId === `hub-${zoneIndex}`,
       );
       // 1 to center + its icon nodes + its avatar nodes
-      expect(hubLinks).toHaveLength(1 + ICON_PER_ZONE + avatarsPerZone);
+      const iconCount = zoneIndex === 0 ? AI_TRIAGER_AD_COUNT : ICON_PER_ZONE;
+      expect(hubLinks).toHaveLength(1 + iconCount + avatarsPerZone);
     }
   });
 

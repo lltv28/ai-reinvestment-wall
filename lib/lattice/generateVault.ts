@@ -10,6 +10,8 @@ const clamp = (value: number, minimum: number, maximum: number): number =>
 
 export const ZONE_COUNT = 6;
 export const ICON_PER_ZONE = 22;
+export const AI_TRIAGER_AD_COUNT = 11;
+export const TOTAL_ICON_COUNT = AI_TRIAGER_AD_COUNT + (ZONE_COUNT - 1) * ICON_PER_ZONE;
 export const AVATAR_COUNT = 96;
 export const SATELLITE_PER_ICON = 2;
 
@@ -153,8 +155,9 @@ export function generateVault(input: {
   for (let zoneIndex = 0; zoneIndex < ZONE_COUNT; zoneIndex += 1) {
     const hub = hubs[zoneIndex]!;
     const zoneIcons: WheelNode[] = [];
-    for (let i = 0; i < ICON_PER_ZONE; i += 1) {
-      const angle = angleWithinZone(zoneIndex, i, ICON_PER_ZONE);
+    const iconCount = zoneIndex === 0 ? AI_TRIAGER_AD_COUNT : ICON_PER_ZONE;
+    for (let i = 0; i < iconCount; i += 1) {
+      const angle = angleWithinZone(zoneIndex, i, iconCount);
       const icon: WheelNode = {
         id: `icon-${zoneIndex}-${i}`,
         ring: "icon",
@@ -223,7 +226,7 @@ export function generateVault(input: {
   // web instead of six isolated fans.
   const crossZonePool = [...iconsByZone, ...avatarsByZone];
   const crossZoneLinkCount = Math.round(
-    (ICON_PER_ZONE * ZONE_COUNT + AVATAR_COUNT) * CROSS_ZONE_LINK_FRACTION,
+    (TOTAL_ICON_COUNT + AVATAR_COUNT) * CROSS_ZONE_LINK_FRACTION,
   );
   let crossZoneLinksMade = 0;
   let attempts = 0;

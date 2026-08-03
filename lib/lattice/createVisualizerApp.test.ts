@@ -3,8 +3,8 @@ import { nodePixelPosition } from "./CanvasRenderer";
 import { createVisualizerApp } from "./createVisualizerApp";
 import {
   AVATAR_COUNT,
-  ICON_PER_ZONE,
   SATELLITE_PER_ICON,
+  TOTAL_ICON_COUNT,
   ZONE_COUNT,
 } from "./generateVault";
 
@@ -69,7 +69,7 @@ describe("createVisualizerApp", () => {
       }),
     });
 
-    const iconCount = ZONE_COUNT * ICON_PER_ZONE;
+    const iconCount = TOTAL_ICON_COUNT;
     const satelliteCount = iconCount * SATELLITE_PER_ICON;
     expect(renderCalls[0]).toBeGreaterThanOrEqual(
       1 + ZONE_COUNT + iconCount + satelliteCount + AVATAR_COUNT + 80,
