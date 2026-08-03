@@ -16,6 +16,7 @@ import {
   nodeIdAtPoint,
   nodePixelPosition,
   screenToWorld,
+  triagerCamera,
   worldToScreen,
   type Camera,
   type CardSide,
@@ -151,6 +152,9 @@ export function createVisualizerApp(
   function targetCamera(): Camera {
     const focusedNode = findFocusedNode();
     if (focusedNode) {
+      if (focusedNode.id === AI_TRIAGER_NODE_ID) {
+        return triagerCamera(canvas.width, canvas.height);
+      }
       return asideCamera(canvas.width, canvas.height, focusSideFor(focusedNode));
     }
     return identityCamera(canvas.width, canvas.height);
@@ -251,18 +255,9 @@ export function createVisualizerApp(
 
     const nodes = visibleGraph().nodes;
     const clickedId = nodeIdAtPoint(worldPoint.x, worldPoint.y, nodes, canvas.width, canvas.height);
-    if (clickedId === undefined) {
-      if (focusedNodeId === undefined) return;
-      focusedNodeId = undefined;
-      renderNow();
-      return;
-    }
     if (clickedId === AI_TRIAGER_NODE_ID) {
       startReinvestment();
-      return;
     }
-    focusedNodeId = focusedNodeId === clickedId ? undefined : clickedId;
-    renderNow();
   }
   canvas.addEventListener("click", handleCanvasClick);
 
@@ -349,7 +344,7 @@ export function createVisualizerApp(
       if (elapsedMs >= REINVESTMENT_TIMING.growEnd) {
         reinvestmentSnapshot = reinvestmentFrame(REINVESTMENT_TIMING.growEnd, reinvestmentCycle);
         reinvestmentStartedAtMs = undefined;
-        focusedNodeId = undefined;
+        focusedNodeId = AI_TRIAGER_NODE_ID;
         nextAutomaticReinvestmentMs = now + 5_000;
         publishReinvestment(true);
       }

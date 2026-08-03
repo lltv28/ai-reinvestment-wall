@@ -7,10 +7,11 @@ import {
   nodeIdAtPoint,
   nodePixelPosition,
   screenToWorld,
+  triagerCamera,
   worldToScreen,
   type Camera,
 } from "./CanvasRenderer";
-import { ADS_NODE_ID, AI_TRIAGER_NODE_ID } from "./reinvestment";
+import { AI_BRAIN_NODE_ID, AI_TRIAGER_NODE_ID } from "./reinvestment";
 import type { WheelGraph, WheelNode } from "./types";
 
 describe("nodePixelPosition", () => {
@@ -134,9 +135,9 @@ describe("neighborIds", () => {
     expect(ids.has("avatar-1-a")).toBe(false);
   });
 
-  it("keeps Ads visible during the AI Triagers reinvestment drill", () => {
-    const ads: WheelNode = {
-      id: ADS_NODE_ID,
+  it("keeps only the AI Triagers slice and AI Brain visible during the drill", () => {
+    const otherHub: WheelNode = {
+      id: "hub-3",
       ring: "hub",
       zoneIndex: 3,
       angle: Math.PI,
@@ -146,11 +147,13 @@ describe("neighborIds", () => {
     };
     const triagers = { ...hub0, id: AI_TRIAGER_NODE_ID };
     const reinvestmentGraph: WheelGraph = {
-      nodes: [center, triagers, ads],
+      nodes: [center, triagers, otherHub],
       links: [{ id: "loop", sourceId: center.id, targetId: triagers.id }],
     };
 
-    expect(neighborIds(reinvestmentGraph, AI_TRIAGER_NODE_ID).has(ADS_NODE_ID)).toBe(true);
+    const ids = neighborIds(reinvestmentGraph, AI_TRIAGER_NODE_ID);
+    expect(ids.has(AI_BRAIN_NODE_ID)).toBe(true);
+    expect(ids.has(otherHub.id)).toBe(false);
   });
 });
 
@@ -218,6 +221,13 @@ describe("identityCamera / asideCamera", () => {
     // targetCx = 2880 * (500/1440) = 1000; lookAtX = 2880 - 1000 = 1880.
     expect(camera.lookAtX).toBeCloseTo(1880);
     expect(camera.lookAtY).toBeCloseTo(1000);
+  });
+
+  it("zooms tightly into the AI Triagers slice", () => {
+    const camera = triagerCamera(1440, 1000);
+    expect(camera.scale).toBeCloseTo(1.45);
+    expect(camera.lookAtX).toBeCloseTo(890);
+    expect(camera.lookAtY).toBeCloseTo(500);
   });
 });
 

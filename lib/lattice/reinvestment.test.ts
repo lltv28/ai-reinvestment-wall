@@ -19,7 +19,7 @@ describe("reinvestmentFrame", () => {
     expect(reinvestmentFrame(REINVESTMENT_TIMING.growEnd, 1).phase).toBe("complete");
   });
 
-  it("finishes with every payment collected and four new leads", () => {
+  it("finishes with five $8 ad credits collected", () => {
     const frame = reinvestmentFrame(REINVESTMENT_TIMING.growEnd, 2);
     expect(frame.collectedUsd).toBe(REINVESTMENT_VALUE_USD);
     expect(frame.collectedPayments).toBe(PAYMENT_PARTICLE_COUNT);

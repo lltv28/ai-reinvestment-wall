@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useCallback, useMemo, useState } from 'react';
-import { ReinvestmentPanel } from '@/components/lattice/ReinvestmentPanel';
+import { AssessmentPhone } from '@/components/lattice/AssessmentPhone';
 import { ScoreboardRail } from '@/components/rail/ScoreboardRail';
 import {
   BASE_CALLS,
@@ -112,14 +112,14 @@ export default function LatticePage() {
                 letterSpacing: '1.8px',
               }}
             >
-              AUTONOMOUS FLYWHEEL
+              AI TRIAGERS
             </div>
             <div style={{ color: '#14201B', fontSize: 24, fontWeight: 600, marginTop: 6 }}>
-              Profit → Intelligence → Ads → Demand
+              Cold stranger → $17 assessment → qualified lead
             </div>
           </div>
 
-          <ReinvestmentPanel frame={frame} />
+          <AssessmentPhone frame={frame} />
         </section>
       </div>
     </main>

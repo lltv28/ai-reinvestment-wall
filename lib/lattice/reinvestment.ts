@@ -1,10 +1,10 @@
 export const AI_TRIAGER_NODE_ID = "hub-0";
-export const ADS_NODE_ID = "hub-3";
 export const AI_BRAIN_NODE_ID = "center";
 
-export const REINVESTMENT_VALUE_USD = 2_184;
-export const PAYMENT_PARTICLE_COUNT = 16;
-export const GENERATED_LEAD_COUNT = 4;
+export const PROFIT_PER_AD_USD = 8;
+export const PAYMENT_PARTICLE_COUNT = 5;
+export const REINVESTMENT_VALUE_USD = PROFIT_PER_AD_USD * PAYMENT_PARTICLE_COUNT;
+export const GENERATED_LEAD_COUNT = 0;
 
 export const REINVESTMENT_TIMING = {
   focusEnd: 2_000,

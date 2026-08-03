@@ -78,7 +78,7 @@ describe("createVisualizerApp", () => {
     root.remove();
   });
 
-  it("focuses the clicked node, and toggles it off on a second click", () => {
+  it("ignores every clicked node except AI Triagers", () => {
     const root = document.createElement("div");
     document.body.append(root);
     const renderCalls: (string | undefined)[] = [];
@@ -96,9 +96,6 @@ describe("createVisualizerApp", () => {
     // an all-zero rect in jsdom, so clientX/clientY map directly onto canvas
     // pixel coordinates). The center node always sits at exactly the canvas
     // center (150,75) regardless of seed, so a click there reliably hits it.
-    canvas.dispatchEvent(new MouseEvent("click", { clientX: 150, clientY: 75, bubbles: true }));
-    expect(renderCalls[renderCalls.length - 1]).toBe("center");
-
     canvas.dispatchEvent(new MouseEvent("click", { clientX: 150, clientY: 75, bubbles: true }));
     expect(renderCalls[renderCalls.length - 1]).toBeUndefined();
 

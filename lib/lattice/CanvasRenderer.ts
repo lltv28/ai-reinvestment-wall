@@ -1,10 +1,10 @@
 import type { WheelGraph, WheelNode } from "./types";
 import { polarToCartesian, wheelRadiusFor } from "./wheelLayout";
 import {
-  ADS_NODE_ID,
   AI_BRAIN_NODE_ID,
   AI_TRIAGER_NODE_ID,
-  GENERATED_LEAD_COUNT,
+  PAYMENT_PARTICLE_COUNT,
+  PROFIT_PER_AD_USD,
   REINVESTMENT_TIMING,
   easeInOutCubic,
   type ReinvestmentFrame,
@@ -18,7 +18,6 @@ const PALETTE = {
   hubLabelText: "#14201b",
   faded: "rgba(20, 32, 27, 0.5)",
   flow: "#2E7D52",
-  flowSoft: "rgba(46, 125, 82, 0.2)",
 };
 
 const FADE_ALPHA = 0.12;
@@ -68,6 +67,14 @@ export function asideCamera(width: number, height: number, cardSide: CardSide): 
   return { scale: 1, lookAtX: width - targetCx, lookAtY: height / 2 };
 }
 
+export function triagerCamera(width: number, height: number): Camera {
+  return {
+    scale: 1.45,
+    lookAtX: width * (890 / 1440),
+    lookAtY: height / 2,
+  };
+}
+
 export function nodePixelPosition(
   node: WheelNode,
   width: number,
@@ -102,7 +109,7 @@ export function neighborIds(graph: WheelGraph, focusedNodeId: string): Set<strin
   // lit alongside the focused triage cluster and AI Brain.
   if (focusedNodeId === AI_TRIAGER_NODE_ID) {
     for (const node of graph.nodes) {
-      if (node.id === ADS_NODE_ID || node.id === AI_BRAIN_NODE_ID || node.zoneIndex === 3) {
+      if (node.id === AI_BRAIN_NODE_ID || node.zoneIndex === 0) {
         ids.add(node.id);
       }
     }
@@ -272,42 +279,60 @@ export class CanvasRenderer {
     positionById: Map<string, { x: number; y: number }>,
     frame: ReinvestmentFrame,
   ): void {
-    const { ctx } = this;
     const triager = positionById.get(AI_TRIAGER_NODE_ID);
     const brain = positionById.get(AI_BRAIN_NODE_ID);
-    const ads = positionById.get(ADS_NODE_ID);
-    if (!triager || !brain || !ads) return;
+    if (!triager || !brain) return;
 
-    const zonePayments = graph.nodes.filter(
-      (node) => node.ring === "avatar" && node.zoneIndex === 0,
-    );
-    if (frame.elapsedMs >= REINVESTMENT_TIMING.focusEnd) {
-      ctx.strokeStyle = PALETTE.flowSoft;
-      ctx.lineWidth = 1.4;
-      for (const node of zonePayments) {
-        const source = positionById.get(node.id);
-        if (!source) continue;
-        ctx.beginPath();
-        ctx.moveTo(source.x, source.y);
-        ctx.lineTo(triager.x, triager.y);
-        ctx.stroke();
-      }
-    }
-
-    const brainProgress =
+    const pairs = this.transactionPairs(graph, positionById);
+    const saleProgress =
       frame.elapsedMs < REINVESTMENT_TIMING.aggregateEnd
         ? 0
         : frame.elapsedMs >= REINVESTMENT_TIMING.brainEnd
           ? 1
           : frame.phaseProgress;
-    const adsProgress =
+    const returnProgress =
       frame.elapsedMs < REINVESTMENT_TIMING.brainEnd
         ? 0
         : frame.elapsedMs >= REINVESTMENT_TIMING.adsEnd
           ? 1
           : frame.phaseProgress;
-    this.drawLineProgress(triager, brain, easeInOutCubic(brainProgress), 0.8, 2.4);
-    this.drawLineProgress(brain, ads, easeInOutCubic(adsProgress), 0.9, 3);
+    for (const pair of pairs) {
+      this.drawLineProgress(pair.lead, pair.ad, easeInOutCubic(saleProgress), 0.34, 1.5);
+      this.drawLineProgress(pair.ad, triager, easeInOutCubic(returnProgress), 0.55, 1.8);
+    }
+
+    const brainProgress =
+      frame.elapsedMs < REINVESTMENT_TIMING.adsEnd
+        ? 0
+        : frame.elapsedMs >= REINVESTMENT_TIMING.growEnd
+          ? 1
+          : frame.phaseProgress;
+    this.drawLineProgress(triager, brain, easeInOutCubic(brainProgress), 0.9, 3);
+  }
+
+  private transactionPairs(
+    graph: WheelGraph,
+    positionById: Map<string, { x: number; y: number }>,
+  ): Array<{ lead: { x: number; y: number }; ad: { x: number; y: number } }> {
+    const leads = graph.nodes
+      .filter((node) => node.ring === "avatar" && node.zoneIndex === 0)
+      .sort((a, b) => a.angle - b.angle);
+    const ads = graph.nodes
+      .filter((node) => node.ring === "icon" && node.zoneIndex === 0)
+      .sort((a, b) => a.angle - b.angle);
+
+    return Array.from({ length: PAYMENT_PARTICLE_COUNT }, (_, index) => {
+      const fraction = index / (PAYMENT_PARTICLE_COUNT - 1);
+      const lead = leads[Math.round(fraction * (leads.length - 1))];
+      const ad = ads[Math.round(fraction * (ads.length - 1))];
+      if (!lead || !ad) return undefined;
+      const leadPosition = positionById.get(lead.id);
+      const adPosition = positionById.get(ad.id);
+      return leadPosition && adPosition ? { lead: leadPosition, ad: adPosition } : undefined;
+    }).filter(
+      (pair): pair is { lead: { x: number; y: number }; ad: { x: number; y: number } } =>
+        Boolean(pair),
+    );
   }
 
   private drawParticle(
@@ -345,87 +370,53 @@ export class CanvasRenderer {
   private drawReinvestmentParticles(
     graph: WheelGraph,
     positionById: Map<string, { x: number; y: number }>,
-    width: number,
-    height: number,
+    _width: number,
+    _height: number,
     frame: ReinvestmentFrame,
   ): void {
     const { ctx } = this;
     const triager = positionById.get(AI_TRIAGER_NODE_ID);
     const brain = positionById.get(AI_BRAIN_NODE_ID);
-    const ads = positionById.get(ADS_NODE_ID);
-    if (!triager || !brain || !ads) return;
+    if (!triager || !brain) return;
 
-    const zonePayments = graph.nodes
-      .filter((node) => node.ring === "avatar" && node.zoneIndex === 0)
-      .sort((a, b) => a.angle - b.angle);
-    const collectionProgress = clamp01(
-      (frame.elapsedMs - REINVESTMENT_TIMING.focusEnd) /
-        (REINVESTMENT_TIMING.collectEnd - REINVESTMENT_TIMING.focusEnd),
-    );
-    zonePayments.forEach((node, index) => {
-      const source = positionById.get(node.id);
-      if (!source) return;
-      const stagger = index * 0.035;
-      const localProgress = clamp01((collectionProgress - stagger) / 0.45);
-      this.drawParticle(source, triager, localProgress, 4.5);
-    });
-
-    const triagerPulse =
-      frame.phase === "collect" || frame.phase === "aggregate"
-        ? 0.5 + 0.5 * Math.sin(frame.elapsedMs / 180)
-        : 0;
-    if (triagerPulse > 0) {
-      ctx.globalAlpha = 0.08 + triagerPulse * 0.1;
-      ctx.fillStyle = PALETTE.flow;
-      ctx.beginPath();
-      ctx.arc(triager.x, triager.y, 34 + triagerPulse * 10, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-
+    const pairs = this.transactionPairs(graph, positionById);
     if (frame.phase === "brain") {
-      this.drawParticle(triager, brain, frame.phaseProgress, 7);
-    }
-    if (frame.phase === "ads") {
-      this.drawParticle(brain, ads, frame.phaseProgress, 9);
+      pairs.forEach((pair, index) => {
+        const localProgress = clamp01((frame.phaseProgress - index * 0.1) / 0.56);
+        this.drawParticle(pair.lead, pair.ad, localProgress, 4.8);
+      });
     }
 
-    if (frame.phase === "brain" || frame.phase === "ads") {
-      const target = frame.phase === "brain" ? brain : ads;
+    if (frame.phase === "ads") {
+      pairs.forEach((pair, index) => {
+        const localProgress = clamp01((frame.phaseProgress - index * 0.09) / 0.6);
+        this.drawParticle(pair.ad, triager, localProgress, 5.5);
+
+        const floatProgress = clamp01((frame.phaseProgress - index * 0.09) / 0.5);
+        if (floatProgress <= 0) return;
+        const fade = 1 - clamp01((floatProgress - 0.68) / 0.32);
+        ctx.globalAlpha = fade;
+        ctx.fillStyle = PALETTE.flow;
+        ctx.font = "700 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`+$${PROFIT_PER_AD_USD}`, pair.ad.x, pair.ad.y - 20 - floatProgress * 15);
+        ctx.globalAlpha = 1;
+      });
+    }
+
+    if (frame.phase === "ads" || frame.phase === "grow") {
       const pulse = 0.5 + 0.5 * Math.sin(frame.elapsedMs / 160);
       ctx.globalAlpha = 0.08 + pulse * 0.09;
       ctx.fillStyle = PALETTE.flow;
       ctx.beginPath();
-      ctx.arc(target.x, target.y, 48 + pulse * 12, 0, Math.PI * 2);
+      ctx.arc(triager.x, triager.y, 38 + pulse * 10, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
     }
 
-    if (frame.elapsedMs >= REINVESTMENT_TIMING.adsEnd) {
-      const centerX = width / 2;
-      const centerY = height / 2;
-      const wheelRadius = wheelRadiusFor(width, height);
-      const offsets = [-0.34, -0.12, 0.12, 0.34];
-      for (let index = 0; index < GENERATED_LEAD_COUNT; index += 1) {
-        const localProgress = clamp01((frame.phaseProgress - index * 0.13) / 0.55);
-        const pop = easeInOutCubic(localProgress);
-        if (pop <= 0) continue;
-        const angle = Math.PI + offsets[index]!;
-        const point = polarToCartesian(centerX, centerY, angle, wheelRadius * 0.96);
-        ctx.globalAlpha = pop;
-        ctx.fillStyle = PALETTE.flow;
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, 7 * pop, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 0.18 * pop;
-        ctx.strokeStyle = PALETTE.flow;
-        ctx.lineWidth = 1.4;
-        ctx.beginPath();
-        ctx.moveTo(ads.x, ads.y);
-        ctx.lineTo(point.x, point.y);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
+    if (frame.phase === "grow") {
+      this.drawParticle(triager, brain, frame.phaseProgress, 8);
     }
   }
 
@@ -470,6 +461,13 @@ export class CanvasRenderer {
         ctx.rect(position.x - node.radius, position.y - node.radius, size, size);
       }
       ctx.fill();
+      if (node.zoneIndex === 0) {
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "700 6px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("AD", position.x, position.y + 0.5);
+      }
       return;
     }
 
@@ -497,8 +495,18 @@ export class CanvasRenderer {
         const labelOffset = node.radius + 14;
         const labelX = position.x + Math.cos(node.angle) * labelOffset;
         const labelY = position.y + Math.sin(node.angle) * labelOffset;
+        const isSystemNode = node.id === AI_TRIAGER_NODE_ID;
+        if (isSystemNode) {
+          ctx.fillStyle = "rgba(247, 248, 247, 0.94)";
+          ctx.beginPath();
+          if (typeof ctx.roundRect === "function") {
+            ctx.roundRect(labelX - 6, labelY - 12, 92, 24, 6);
+          } else {
+            ctx.rect(labelX - 6, labelY - 12, 92, 24);
+          }
+          ctx.fill();
+        }
         ctx.fillStyle = PALETTE.hubLabelText;
-        const isSystemNode = node.id === AI_TRIAGER_NODE_ID || node.id === ADS_NODE_ID;
         ctx.font = isSystemNode
           ? "600 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif"
           : "12px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";

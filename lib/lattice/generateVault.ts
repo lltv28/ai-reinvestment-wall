@@ -1,7 +1,7 @@
 import { createRandom } from "./random";
 import { buildLeadIdentities } from "./leads";
 import { buildRepLabel, SALES_REPS } from "./salesReps";
-import { ADS_NODE_ID, AI_BRAIN_NODE_ID, AI_TRIAGER_NODE_ID } from "./reinvestment";
+import { AI_BRAIN_NODE_ID, AI_TRIAGER_NODE_ID } from "./reinvestment";
 import { angleForIndex } from "./wheelLayout";
 import type { WheelGraph, WheelLink, WheelNode } from "./types";
 
@@ -134,16 +134,15 @@ export function generateVault(input: {
     const repName = SALES_REPS[(input.seed + zoneIndex) % SALES_REPS.length]!;
     const id = `hub-${zoneIndex}`;
     const isAiTriagers = id === AI_TRIAGER_NODE_ID;
-    const isAds = id === ADS_NODE_ID;
     const hub: WheelNode = {
       id,
       ring: "hub",
       zoneIndex,
       angle: angleForIndex(zoneIndex, ZONE_COUNT),
       radiusFraction: RADIUS_FRACTIONS.hub,
-      radius: isAiTriagers || isAds ? 28 : NODE_PX_RADIUS.hub,
+      radius: isAiTriagers ? 28 : NODE_PX_RADIUS.hub,
       color: ZONE_COLORS[zoneIndex]!,
-      label: isAiTriagers ? "AI Triagers" : isAds ? "Ads" : buildRepLabel(repName),
+      label: isAiTriagers ? "AI Triagers" : buildRepLabel(repName),
     };
     hubs.push(hub);
     nodes.push(hub);
@@ -162,7 +161,7 @@ export function generateVault(input: {
         zoneIndex,
         angle,
         radiusFraction: jitteredRadiusFraction(RADIUS_FRACTIONS.icon, i),
-        radius: NODE_PX_RADIUS.icon,
+        radius: zoneIndex === 0 ? 7.5 : NODE_PX_RADIUS.icon,
         color: ZONE_COLORS[zoneIndex]!,
       };
       nodes.push(icon);
