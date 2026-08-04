@@ -53,19 +53,24 @@ export function graphForReinvestmentMode(
 ): WheelGraph {
   if (mode === "ads") return graph;
 
-  const hiddenIds = new Set(
-    graph.nodes
-      .filter(
-        (node) =>
-          node.zoneIndex === 0 && (node.ring === "icon" || node.ring === "satellite"),
-      )
-      .map((node) => node.id),
+  const nodes = graph.nodes
+    .filter(
+      (node) =>
+        node.id === "center" ||
+        node.id === AI_TRIAGER_NODE_ID ||
+        (node.zoneIndex === 0 && node.ring === "avatar"),
+    )
+    .map((node) =>
+      node.id === AI_TRIAGER_NODE_ID
+        ? { ...node, radius: 60 }
+        : node,
   );
+  const visibleIds = new Set(nodes.map((node) => node.id));
 
   return {
-    nodes: graph.nodes.filter((node) => !hiddenIds.has(node.id)),
+    nodes,
     links: graph.links.filter(
-      (link) => !hiddenIds.has(link.sourceId) && !hiddenIds.has(link.targetId),
+      (link) => visibleIds.has(link.sourceId) && visibleIds.has(link.targetId),
     ),
   };
 }
