@@ -589,7 +589,7 @@ export class CanvasRenderer {
     const { ctx } = this;
     ctx.globalAlpha = 1;
     ctx.fillStyle = "#ffffff";
-    ctx.font = "600 13px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+    ctx.font = "600 18px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(`$${triagerRevenueUsd(frame)}`, triager.x, triager.y + 0.5);
