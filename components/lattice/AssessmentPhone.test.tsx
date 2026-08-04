@@ -10,6 +10,15 @@ function phoneScreens(container: HTMLElement): string[] {
 }
 
 describe('AssessmentPhone', () => {
+  it('uses $8 across every phone screen', () => {
+    const { container } = render(
+      <AssessmentPhone frame={reinvestmentFrame(2_500, 1)} />,
+    );
+
+    expect(container.textContent).toContain('$8');
+    expect(container.textContent).not.toContain('$17');
+  });
+
   it('advances only some phones at each staggered motion tick', () => {
     const { container, rerender } = render(
       <AssessmentPhone frame={reinvestmentFrame(2_500, 1)} />,

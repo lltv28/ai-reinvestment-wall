@@ -41,7 +41,7 @@ function MiniPhoneContent({ screen }: { screen: AssessmentPhoneScreen }) {
       <>
         <span className="mini-kicker">ASSESSMENT</span>
         <strong className="mini-title">Find your growth gap</strong>
-        <div className="mini-price">$17</div>
+        <div className="mini-price">${PROFIT_PER_AD_USD}</div>
         <div className="mini-button">Start</div>
       </>
     );
@@ -76,9 +76,9 @@ function MiniPhoneContent({ screen }: { screen: AssessmentPhoneScreen }) {
       <>
         <span className="mini-kicker">CHECKOUT</span>
         <strong className="mini-title">Unlock your plan</strong>
-        <div className="mini-order"><span>Assessment</span><b>$17</b></div>
+        <div className="mini-order"><span>Assessment</span><b>${PROFIT_PER_AD_USD}</b></div>
         <div className="mini-card-field" />
-        <div className="mini-button">Pay $17</div>
+        <div className="mini-button">Pay ${PROFIT_PER_AD_USD}</div>
       </>
     );
   }
