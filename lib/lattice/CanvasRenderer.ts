@@ -8,6 +8,7 @@ import {
   TRIAGER_CONNECTION_DURATION_MS,
   TRIAGER_RETURN_DURATION_MS,
   TRIAGER_SALE_ARRIVAL_MS,
+  directBudgetImpactAt,
   easeInOutCubic,
   triagerConnectionAt,
   triagerRevenueUsd,
@@ -241,6 +242,10 @@ export class CanvasRenderer {
       graph.nodes.map((node) => [node.id, nodePixelPosition(node, width, height)]),
     );
     const focusedIds = focusedNodeId ? neighborIds(graph, focusedNodeId) : undefined;
+    const budgetImpact =
+      reinvestment && this.reinvestmentMode === "direct"
+        ? directBudgetImpactAt(reinvestment.connectionElapsedMs)
+        : undefined;
 
     ctx.save();
     ctx.translate(width / 2, height / 2);
@@ -280,7 +285,17 @@ export class CanvasRenderer {
       const isNeighbor = !focusedIds || focusedIds.has(node.id);
       if (isNeighbor) {
         ctx.globalAlpha = 1;
-        this.drawNode(node, position);
+        if (node.id === AI_TRIAGER_NODE_ID && budgetImpact?.active) {
+          this.drawBudgetImpactRing(position, node.radius, budgetImpact.progress);
+          ctx.save();
+          ctx.translate(position.x, position.y);
+          ctx.scale(budgetImpact.scale, budgetImpact.scale);
+          ctx.translate(-position.x, -position.y);
+          this.drawNode(node, position);
+          ctx.restore();
+        } else {
+          this.drawNode(node, position);
+        }
       } else {
         // Crossfade: full detail fades out as the camera zooms in, while
         // the soft faded dot fades in at the same rate.
@@ -294,12 +309,49 @@ export class CanvasRenderer {
       (reinvestment.phase !== "idle" || this.reinvestmentMode === "direct")
     ) {
       this.drawTriagerRevenue(positionById, reinvestment);
+      if (this.reinvestmentMode === "direct") {
+        this.drawBudgetImpactValue(positionById, reinvestment);
+      }
     }
     if (reinvestment && reinvestment.phase !== "idle") {
       this.drawTriagerLabel(graph, positionById, reinvestment);
     }
     ctx.globalAlpha = 1;
     ctx.restore();
+  }
+
+  private drawBudgetImpactRing(
+    position: { x: number; y: number },
+    radius: number,
+    progress: number,
+  ): void {
+    const { ctx } = this;
+    ctx.globalAlpha = (1 - progress) * 0.26;
+    ctx.strokeStyle = PALETTE.flow;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(position.x, position.y, radius * (1.06 + progress * 0.28), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  private drawBudgetImpactValue(
+    positionById: Map<string, { x: number; y: number }>,
+    frame: ReinvestmentFrame,
+  ): void {
+    const budget = positionById.get(AI_TRIAGER_NODE_ID);
+    const impact = directBudgetImpactAt(frame.connectionElapsedMs);
+    if (!budget || !impact.active) return;
+
+    const fade = 1 - clamp01((impact.progress - 0.5) / 0.5);
+    const { ctx } = this;
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = PALETTE.flow;
+    ctx.font = "700 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`+$${PROFIT_PER_AD_USD}`, budget.x, budget.y - 79 - impact.progress * 22);
+    ctx.globalAlpha = 1;
   }
 
   private drawLineProgress(

@@ -10,6 +10,7 @@ export const TRIAGER_PHONE_COUNT = 9;
 export const TRIAGER_CONNECTION_DURATION_MS = 1_250;
 export const TRIAGER_SALE_ARRIVAL_MS = 1_050;
 export const TRIAGER_RETURN_DURATION_MS = 900;
+export const BUDGET_IMPACT_DURATION_MS = 380;
 
 export type ReinvestmentMode = "ads" | "direct";
 
@@ -160,6 +161,34 @@ export function triagerConnectionAt(connectionElapsedMs: number): {
     triagerIndex,
     phoneIndex: triagerIndex % TRIAGER_PHONE_COUNT,
     progress: (elapsedMs % TRIAGER_CONNECTION_DURATION_MS) / TRIAGER_CONNECTION_DURATION_MS,
+  };
+}
+
+export function directBudgetImpactAt(connectionElapsedMs: number): {
+  active: boolean;
+  progress: number;
+  scale: number;
+} {
+  const elapsedMs = Math.max(0, connectionElapsedMs);
+  if (elapsedMs < TRIAGER_SALE_ARRIVAL_MS) {
+    return { active: false, progress: 0, scale: 1 };
+  }
+
+  const cycleElapsedMs = elapsedMs % TRIAGER_CONNECTION_DURATION_MS;
+  const ageMs =
+    cycleElapsedMs >= TRIAGER_SALE_ARRIVAL_MS
+      ? cycleElapsedMs - TRIAGER_SALE_ARRIVAL_MS
+      : cycleElapsedMs + TRIAGER_CONNECTION_DURATION_MS - TRIAGER_SALE_ARRIVAL_MS;
+  if (ageMs >= BUDGET_IMPACT_DURATION_MS) {
+    return { active: false, progress: 1, scale: 1 };
+  }
+
+  const progress = ageMs / BUDGET_IMPACT_DURATION_MS;
+  const pulseProgress = clamp01(ageMs / 260);
+  return {
+    active: true,
+    progress,
+    scale: 1 + Math.sin(Math.PI * pulseProgress) * 0.04,
   };
 }
 

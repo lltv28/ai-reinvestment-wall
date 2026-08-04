@@ -9,6 +9,7 @@ import {
   TRIAGER_RETURN_DURATION_MS,
   TRIAGER_SALE_ARRIVAL_MS,
   assessmentPhoneScreen,
+  directBudgetImpactAt,
   easeInOutCubic,
   reinvestmentFrame,
   triagerConnectionAt,
@@ -62,6 +63,18 @@ describe("reinvestmentFrame", () => {
 
     expect(triagerRevenueUsd(frameAt(TRIAGER_SALE_ARRIVAL_MS - 1), "direct")).toBe(0);
     expect(triagerRevenueUsd(frameAt(TRIAGER_SALE_ARRIVAL_MS), "direct")).toBe(8);
+  });
+
+  it("pulses the ad budget when each direct-return dot arrives", () => {
+    expect(directBudgetImpactAt(TRIAGER_SALE_ARRIVAL_MS - 1).active).toBe(false);
+
+    const impact = directBudgetImpactAt(TRIAGER_SALE_ARRIVAL_MS + 130);
+    expect(impact.active).toBe(true);
+    expect(impact.scale).toBeCloseTo(1.04);
+
+    const continuedImpact = directBudgetImpactAt(TRIAGER_CONNECTION_DURATION_MS + 20);
+    expect(continuedImpact.active).toBe(true);
+    expect(continuedImpact.progress).toBeGreaterThan(0.5);
   });
 
   it("advances the phone through each screen at its intended moment", () => {
