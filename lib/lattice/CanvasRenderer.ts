@@ -3,9 +3,11 @@ import { polarToCartesian, wheelRadiusFor } from "./wheelLayout";
 import {
   AI_BRAIN_NODE_ID,
   AI_TRIAGER_NODE_ID,
-  PAYMENT_PARTICLE_COUNT,
   PROFIT_PER_AD_USD,
   REINVESTMENT_TIMING,
+  TRIAGER_CONNECTION_DURATION_MS,
+  TRIAGER_RETURN_DURATION_MS,
+  TRIAGER_SALE_ARRIVAL_MS,
   easeInOutCubic,
   triagerConnectionAt,
   triagerRevenueUsd,
@@ -393,17 +395,6 @@ export class CanvasRenderer {
     const brain = positionById.get(AI_BRAIN_NODE_ID);
     if (!triager || !brain) return;
 
-    const pairs = this.transactionPairs(graph, positionById);
-    pairs.forEach((pair, index) => {
-      const returnProgress =
-        frame.elapsedMs < REINVESTMENT_TIMING.brainEnd
-          ? 0
-          : frame.elapsedMs >= REINVESTMENT_TIMING.adsEnd
-            ? 1
-            : clamp01((frame.phaseProgress - index * 0.09) / 0.6);
-      this.drawLineProgress(pair.ad, triager, easeInOutCubic(returnProgress), 0.55, 1.8);
-    });
-
     const brainProgress =
       frame.elapsedMs < REINVESTMENT_TIMING.adsEnd
         ? 0
@@ -415,6 +406,11 @@ export class CanvasRenderer {
     const connection = triagerConnectionAt(frame.connectionElapsedMs);
     const avatarPositions = graph.nodes
       .filter((node) => node.ring === "avatar" && node.zoneIndex === 0)
+      .map((node) => positionById.get(node.id))
+      .filter((position): position is { x: number; y: number } => Boolean(position))
+      .sort((a, b) => a.y - b.y);
+    const adPositions = graph.nodes
+      .filter((node) => node.ring === "icon" && node.zoneIndex === 0)
       .map((node) => positionById.get(node.id))
       .filter((position): position is { x: number; y: number } => Boolean(position))
       .sort((a, b) => a.y - b.y);
@@ -444,11 +440,6 @@ export class CanvasRenderer {
       this.drawPolylineProgress(connectorPoints, drawProgress, 0.64 * fade, 1.9);
       this.drawPolylineParticle(connectorPoints, particleProgress);
 
-      const adPositions = graph.nodes
-        .filter((node) => node.ring === "icon" && node.zoneIndex === 0)
-        .map((node) => positionById.get(node.id))
-        .filter((position): position is { x: number; y: number } => Boolean(position))
-        .sort((a, b) => a.y - b.y);
       const adIndex = Math.round(
         connection.triagerIndex * ((adPositions.length - 1) / (avatarPositions.length - 1)),
       );
@@ -475,31 +466,48 @@ export class CanvasRenderer {
         }
       }
     }
-  }
 
-  private transactionPairs(
-    graph: WheelGraph,
-    positionById: Map<string, { x: number; y: number }>,
-  ): Array<{ lead: { x: number; y: number }; ad: { x: number; y: number } }> {
-    const leads = graph.nodes
-      .filter((node) => node.ring === "avatar" && node.zoneIndex === 0)
-      .sort((a, b) => a.angle - b.angle);
-    const ads = graph.nodes
-      .filter((node) => node.ring === "icon" && node.zoneIndex === 0)
-      .sort((a, b) => a.angle - b.angle);
-
-    return Array.from({ length: PAYMENT_PARTICLE_COUNT }, (_, index) => {
-      const fraction = index / (PAYMENT_PARTICLE_COUNT - 1);
-      const lead = leads[Math.round(fraction * (leads.length - 1))];
-      const ad = ads[Math.round(fraction * (ads.length - 1))];
-      if (!lead || !ad) return undefined;
-      const leadPosition = positionById.get(lead.id);
-      const adPosition = positionById.get(ad.id);
-      return leadPosition && adPosition ? { lead: leadPosition, ad: adPosition } : undefined;
-    }).filter(
-      (pair): pair is { lead: { x: number; y: number }; ad: { x: number; y: number } } =>
-        Boolean(pair),
+    const currentEventIndex = Math.floor(
+      frame.connectionElapsedMs / TRIAGER_CONNECTION_DURATION_MS,
     );
+    for (const eventOffset of [0, 1]) {
+      const eventIndex = currentEventIndex - eventOffset;
+      if (eventIndex < 0) continue;
+      const eventAgeMs =
+        frame.connectionElapsedMs - eventIndex * TRIAGER_CONNECTION_DURATION_MS;
+      const returnProgress = clamp01(
+        (eventAgeMs - TRIAGER_SALE_ARRIVAL_MS) / TRIAGER_RETURN_DURATION_MS,
+      );
+      if (returnProgress <= 0 || returnProgress >= 1) continue;
+
+      const eventTriagerIndex = eventIndex % avatarPositions.length;
+      const eventAvatar = avatarPositions[eventTriagerIndex];
+      const eventAdIndex = Math.round(
+        eventTriagerIndex * ((adPositions.length - 1) / (avatarPositions.length - 1)),
+      );
+      const eventAd = adPositions[eventAdIndex];
+      if (!eventAvatar || !eventAd) continue;
+
+      const returnFade = 1 - clamp01((returnProgress - 0.84) / 0.16);
+      this.drawLineProgress(
+        eventAd,
+        triager,
+        easeInOutCubic(returnProgress),
+        0.62 * returnFade,
+        1.9,
+      );
+      this.drawParticle(eventAd, triager, returnProgress, 5.2);
+
+      const floatFade = 1 - clamp01((returnProgress - 0.62) / 0.38);
+      const { ctx } = this;
+      ctx.globalAlpha = floatFade;
+      ctx.fillStyle = PALETTE.flow;
+      ctx.font = "700 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`+$${PROFIT_PER_AD_USD}`, eventAd.x, eventAd.y - 20 - returnProgress * 14);
+      ctx.globalAlpha = 1;
+    }
   }
 
   private drawParticle(
@@ -545,25 +553,6 @@ export class CanvasRenderer {
     const triager = positionById.get(AI_TRIAGER_NODE_ID);
     const brain = positionById.get(AI_BRAIN_NODE_ID);
     if (!triager || !brain) return;
-
-    const pairs = this.transactionPairs(graph, positionById);
-    if (frame.phase === "ads") {
-      pairs.forEach((pair, index) => {
-        const localProgress = clamp01((frame.phaseProgress - index * 0.09) / 0.6);
-        this.drawParticle(pair.ad, triager, localProgress, 4.8);
-
-        const floatProgress = clamp01((frame.phaseProgress - index * 0.09) / 0.5);
-        if (floatProgress <= 0) return;
-        const fade = 1 - clamp01((floatProgress - 0.68) / 0.32);
-        ctx.globalAlpha = fade;
-        ctx.fillStyle = PALETTE.flow;
-        ctx.font = "700 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(`+$${PROFIT_PER_AD_USD}`, pair.ad.x, pair.ad.y - 20 - floatProgress * 15);
-        ctx.globalAlpha = 1;
-      });
-    }
 
     if (frame.phase === "ads" || frame.phase === "grow") {
       const pulse = 0.5 + 0.5 * Math.sin(frame.elapsedMs / 160);

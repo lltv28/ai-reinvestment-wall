@@ -6,6 +6,8 @@ import {
   REINVESTMENT_TIMING,
   REINVESTMENT_VALUE_USD,
   TRIAGER_CONNECTION_DURATION_MS,
+  TRIAGER_RETURN_DURATION_MS,
+  TRIAGER_SALE_ARRIVAL_MS,
   assessmentPhoneScreen,
   easeInOutCubic,
   reinvestmentFrame,
@@ -38,11 +40,18 @@ describe("reinvestmentFrame", () => {
     expect(easeInOutCubic(2)).toBe(1);
   });
 
-  it("increments the AI Triagers revenue by $8 as each return arrives", () => {
-    expect(triagerRevenueUsd(reinvestmentFrame(REINVESTMENT_TIMING.brainEnd, 1))).toBe(0);
-    expect(triagerRevenueUsd(reinvestmentFrame(12_200, 1))).toBe(8);
-    expect(triagerRevenueUsd(reinvestmentFrame(12_950, 1))).toBe(40);
-    expect(triagerRevenueUsd(reinvestmentFrame(REINVESTMENT_TIMING.adsEnd, 1))).toBe(40);
+  it("increments the AI Triagers revenue by $8 as each synced return arrives", () => {
+    const firstArrival = TRIAGER_SALE_ARRIVAL_MS + TRIAGER_RETURN_DURATION_MS;
+    const frameAt = (connectionElapsedMs: number) => ({
+      ...reinvestmentFrame(5_000, 1),
+      connectionElapsedMs,
+    });
+
+    expect(triagerRevenueUsd(frameAt(firstArrival - 1))).toBe(0);
+    expect(triagerRevenueUsd(frameAt(firstArrival))).toBe(8);
+    expect(
+      triagerRevenueUsd(frameAt(firstArrival + TRIAGER_CONNECTION_DURATION_MS)),
+    ).toBe(16);
   });
 
   it("advances the phone through each screen at its intended moment", () => {

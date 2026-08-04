@@ -8,6 +8,8 @@ export const GENERATED_LEAD_COUNT = 0;
 export const AI_TRIAGER_COUNT = 16;
 export const TRIAGER_PHONE_COUNT = 9;
 export const TRIAGER_CONNECTION_DURATION_MS = 1_250;
+export const TRIAGER_SALE_ARRIVAL_MS = 1_050;
+export const TRIAGER_RETURN_DURATION_MS = 900;
 
 export const REINVESTMENT_TIMING = {
   focusEnd: 2_000,
@@ -172,14 +174,13 @@ export function assessmentPhoneScreen(frame: ReinvestmentFrame): AssessmentPhone
 }
 
 export function triagerRevenueUsd(frame: ReinvestmentFrame): number {
-  if (frame.elapsedMs < REINVESTMENT_TIMING.brainEnd) return 0;
-  if (frame.elapsedMs >= REINVESTMENT_TIMING.adsEnd) return REINVESTMENT_VALUE_USD;
-
-  const completedReturns = Array.from({ length: PAYMENT_PARTICLE_COUNT }, (_, index) => {
-    const localProgress = clamp01((frame.phaseProgress - index * 0.09) / 0.6);
-    return localProgress >= 1 ? 1 : 0;
-  }).reduce<number>((total, completed) => total + completed, 0);
-
+  const firstReturnCompleteMs = TRIAGER_SALE_ARRIVAL_MS + TRIAGER_RETURN_DURATION_MS;
+  if (frame.connectionElapsedMs < firstReturnCompleteMs) return 0;
+  const completedReturns =
+    Math.floor(
+      (frame.connectionElapsedMs - firstReturnCompleteMs) /
+        TRIAGER_CONNECTION_DURATION_MS,
+    ) + 1;
   return completedReturns * PROFIT_PER_AD_USD;
 }
 
