@@ -10,6 +10,7 @@ import {
   ZONE_COUNT,
 } from "./generateVault";
 import { buildLeadIdentities } from "./leads";
+import { AI_BRAIN_NODE_ID, AI_TRIAGER_NODE_ID } from "./reinvestment";
 import type { WheelLink, WheelNode } from "./types";
 
 describe("generateVault", () => {
@@ -31,6 +32,14 @@ describe("generateVault", () => {
   it("has exactly one center node", () => {
     const graph = generateVault({ nodeCount: 80, linkDensity: 0.1, seed: 1 });
     expect(graph.nodes.filter((node) => node.ring === "center")).toHaveLength(1);
+  });
+
+  it("makes the AI Triagers revenue circle the same size as the AI Brain", () => {
+    const graph = generateVault({ nodeCount: 80, linkDensity: 0.1, seed: 1 });
+    const brain = graph.nodes.find((node) => node.id === AI_BRAIN_NODE_ID);
+    const triagers = graph.nodes.find((node) => node.id === AI_TRIAGER_NODE_ID);
+
+    expect(triagers?.radius).toBe(brain?.radius);
   });
 
   it("has exactly 6 hub nodes with distinct colors, distinct labels, and zone indexes 0-5", () => {

@@ -142,7 +142,7 @@ export function generateVault(input: {
       zoneIndex,
       angle: angleForIndex(zoneIndex, ZONE_COUNT),
       radiusFraction: RADIUS_FRACTIONS.hub,
-      radius: isAiTriagers ? 28 : NODE_PX_RADIUS.hub,
+      radius: isAiTriagers ? NODE_PX_RADIUS.center : NODE_PX_RADIUS.hub,
       color: ZONE_COLORS[zoneIndex]!,
       label: isAiTriagers ? "AI Triagers" : buildRepLabel(repName),
     };
