@@ -437,22 +437,22 @@ export class CanvasRenderer {
       const routeTop = screenToWorld(laneX, routeY, width, height, camera);
       const routeSide = screenToWorld(laneX, phoneY, width, height, camera);
       const phoneAnchor = screenToWorld(phoneX, phoneY, width, height, camera);
-      const connectorPoints = [avatarPosition, routeTop, routeSide, phoneAnchor];
-      const drawProgress = easeInOutCubic(clamp01(connection.progress / 0.28));
-      const fade = 1 - clamp01((connection.progress - 0.82) / 0.18);
-      const particleProgress = clamp01((connection.progress - 0.18) / 0.58);
+      const connectorPoints = [phoneAnchor, routeSide, routeTop, avatarPosition];
+      const drawProgress = easeInOutCubic(clamp01(connection.progress / 0.22));
+      const fade = 1 - clamp01((connection.progress - 0.88) / 0.12);
+      const particleProgress = clamp01((connection.progress - 0.1) / 0.42);
       const { ctx } = this;
 
       ctx.globalAlpha = 0.1 * fade;
       ctx.fillStyle = PALETTE.flow;
       ctx.beginPath();
-      ctx.arc(avatarPosition.x, avatarPosition.y, 13, 0, Math.PI * 2);
+      ctx.arc(phoneAnchor.x, phoneAnchor.y, 13, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
       this.drawPolylineProgress(connectorPoints, drawProgress, 0.64 * fade, 1.9);
       this.drawPolylineParticle(connectorPoints, particleProgress);
 
-      const saleProgress = clamp01((connection.progress - 0.32) / 0.52);
+      const saleProgress = clamp01((connection.progress - 0.56) / 0.28);
       if (this.reinvestmentMode === "direct" && saleProgress > 0) {
         this.drawLineProgress(
           avatarPosition,
