@@ -633,10 +633,10 @@ export class CanvasRenderer {
         ctx.fillText("Ad Budget", triager.x, triager.y);
         return;
       }
-      ctx.font = "600 24px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
-      ctx.fillText(`+$${revenue}`, triager.x, triager.y - 5);
-      ctx.font = "600 11px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
-      ctx.fillText("Ad Budget", triager.x, triager.y + 15);
+      ctx.font = "600 31px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+      ctx.fillText(`+$${revenue}`, triager.x, triager.y - 7);
+      ctx.font = "600 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+      ctx.fillText("Ad Budget", triager.x, triager.y + 19);
     } else {
       ctx.fillText(`$${revenue}`, triager.x, triager.y + 0.5);
     }
