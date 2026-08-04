@@ -10,7 +10,7 @@ export const TRIAGER_PHONE_COUNT = 9;
 export const TRIAGER_CONNECTION_DURATION_MS = 1_250;
 export const TRIAGER_SALE_ARRIVAL_MS = 1_050;
 export const TRIAGER_RETURN_DURATION_MS = 900;
-export const BUDGET_IMPACT_DURATION_MS = 380;
+export const BUDGET_IMPACT_DURATION_MS = 560;
 
 export type ReinvestmentMode = "ads" | "direct";
 
@@ -184,11 +184,11 @@ export function directBudgetImpactAt(connectionElapsedMs: number): {
   }
 
   const progress = ageMs / BUDGET_IMPACT_DURATION_MS;
-  const pulseProgress = clamp01(ageMs / 260);
+  const pulseProgress = clamp01(ageMs / 480);
   return {
     active: true,
     progress,
-    scale: 1 + Math.sin(Math.PI * pulseProgress) * 0.04,
+    scale: 1 + Math.sin(Math.PI * pulseProgress) * 0.018,
   };
 }
 

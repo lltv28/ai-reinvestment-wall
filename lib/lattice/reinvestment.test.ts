@@ -70,11 +70,12 @@ describe("reinvestmentFrame", () => {
 
     const impact = directBudgetImpactAt(TRIAGER_SALE_ARRIVAL_MS + 130);
     expect(impact.active).toBe(true);
-    expect(impact.scale).toBeCloseTo(1.04);
+    expect(impact.scale).toBeGreaterThan(1);
+    expect(impact.scale).toBeLessThanOrEqual(1.018);
 
     const continuedImpact = directBudgetImpactAt(TRIAGER_CONNECTION_DURATION_MS + 20);
     expect(continuedImpact.active).toBe(true);
-    expect(continuedImpact.progress).toBeGreaterThan(0.5);
+    expect(continuedImpact.progress).toBeGreaterThan(0.35);
   });
 
   it("advances the phone through each screen at its intended moment", () => {

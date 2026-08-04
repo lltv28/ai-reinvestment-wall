@@ -326,11 +326,18 @@ export class CanvasRenderer {
     progress: number,
   ): void {
     const { ctx } = this;
-    ctx.globalAlpha = (1 - progress) * 0.26;
+    const easedProgress = easeInOutCubic(progress);
+    ctx.globalAlpha = (1 - progress) * 0.14;
     ctx.strokeStyle = PALETTE.flow;
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = 1.8;
     ctx.beginPath();
-    ctx.arc(position.x, position.y, radius * (1.06 + progress * 0.28), 0, Math.PI * 2);
+    ctx.arc(
+      position.x,
+      position.y,
+      radius * (1.04 + easedProgress * 0.12),
+      0,
+      Math.PI * 2,
+    );
     ctx.stroke();
     ctx.globalAlpha = 1;
   }
@@ -350,7 +357,11 @@ export class CanvasRenderer {
     ctx.font = "700 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(`+$${PROFIT_PER_AD_USD}`, budget.x, budget.y - 79 - impact.progress * 22);
+    ctx.fillText(
+      `+$${PROFIT_PER_AD_USD}`,
+      budget.x,
+      budget.y - 76 - easeInOutCubic(impact.progress) * 10,
+    );
     ctx.globalAlpha = 1;
   }
 
