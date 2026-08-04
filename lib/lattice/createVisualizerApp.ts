@@ -50,28 +50,57 @@ export interface VisualizerDependencies {
 export function graphForReinvestmentMode(
   graph: WheelGraph,
   mode: ReinvestmentMode = "ads",
+  focused = false,
 ): WheelGraph {
   if (mode === "ads") return graph;
 
+  const hiddenAdIds = new Set(
+    graph.nodes
+      .filter(
+        (node) =>
+          node.zoneIndex === 0 && (node.ring === "icon" || node.ring === "satellite"),
+      )
+      .map((node) => node.id),
+  );
   const nodes = graph.nodes
     .filter(
       (node) =>
-        node.id === "center" ||
-        node.id === AI_TRIAGER_NODE_ID ||
-        (node.zoneIndex === 0 && node.ring === "avatar"),
+        !hiddenAdIds.has(node.id) &&
+        node.id !== "center" &&
+        (node.ring !== "hub" || node.id === AI_TRIAGER_NODE_ID),
     )
     .map((node) =>
       node.id === AI_TRIAGER_NODE_ID
-        ? { ...node, radius: 60 }
+        ? { ...node, angle: 0, radiusFraction: 0, radius: 60, label: "Ad Budget" }
         : node,
   );
   const visibleIds = new Set(nodes.map((node) => node.id));
+  const links = graph.links
+    .filter(
+      (link) =>
+        !hiddenAdIds.has(link.sourceId) &&
+        !hiddenAdIds.has(link.targetId) &&
+        link.sourceId !== "center" &&
+        link.targetId !== "center",
+    )
+    .map((link) => {
+      if (focused) return link;
+      return {
+        ...link,
+        sourceId: link.sourceId.startsWith("hub-") ? AI_TRIAGER_NODE_ID : link.sourceId,
+        targetId: link.targetId.startsWith("hub-") ? AI_TRIAGER_NODE_ID : link.targetId,
+      };
+    })
+    .filter(
+      (link) =>
+        link.sourceId !== link.targetId &&
+        visibleIds.has(link.sourceId) &&
+        visibleIds.has(link.targetId),
+    );
 
   return {
     nodes,
-    links: graph.links.filter(
-      (link) => visibleIds.has(link.sourceId) && visibleIds.has(link.targetId),
-    ),
+    links,
   };
 }
 
@@ -195,7 +224,11 @@ export function createVisualizerApp(
 
   function renderNow(): void {
     renderer.render(
-      graphForReinvestmentMode(visibleGraph(), dependencies.reinvestmentMode),
+      graphForReinvestmentMode(
+        visibleGraph(),
+        dependencies.reinvestmentMode,
+        focusedNodeId !== undefined,
+      ),
       focusedNodeId,
       camera,
       reinvestmentSnapshot,

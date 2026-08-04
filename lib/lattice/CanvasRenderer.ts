@@ -289,8 +289,13 @@ export class CanvasRenderer {
         this.drawFadedNode(position, focusStrength);
       }
     }
-    if (reinvestment && reinvestment.phase !== "idle") {
+    if (
+      reinvestment &&
+      (reinvestment.phase !== "idle" || this.reinvestmentMode === "direct")
+    ) {
       this.drawTriagerRevenue(positionById, reinvestment);
+    }
+    if (reinvestment && reinvestment.phase !== "idle") {
       this.drawTriagerLabel(graph, positionById, reinvestment);
     }
     ctx.globalAlpha = 1;
@@ -397,15 +402,18 @@ export class CanvasRenderer {
   ): void {
     const triager = positionById.get(AI_TRIAGER_NODE_ID);
     const brain = positionById.get(AI_BRAIN_NODE_ID);
-    if (!triager || !brain) return;
+    if (!triager) return;
 
-    const brainProgress =
-      frame.elapsedMs < REINVESTMENT_TIMING.adsEnd
-        ? 0
-        : frame.elapsedMs >= REINVESTMENT_TIMING.growEnd
-          ? 1
-          : frame.phaseProgress;
-    this.drawLineProgress(triager, brain, easeInOutCubic(brainProgress), 0.9, 3);
+    if (this.reinvestmentMode === "ads") {
+      if (!brain) return;
+      const brainProgress =
+        frame.elapsedMs < REINVESTMENT_TIMING.adsEnd
+          ? 0
+          : frame.elapsedMs >= REINVESTMENT_TIMING.growEnd
+            ? 1
+            : frame.phaseProgress;
+      this.drawLineProgress(triager, brain, easeInOutCubic(brainProgress), 0.9, 3);
+    }
 
     const connection = triagerConnectionAt(frame.connectionElapsedMs);
     const avatarPositions = graph.nodes
@@ -620,6 +628,11 @@ export class CanvasRenderer {
     ctx.textBaseline = "middle";
     const revenue = triagerRevenueUsd(frame, this.reinvestmentMode);
     if (this.reinvestmentMode === "direct") {
+      if (frame.phase === "idle") {
+        ctx.font = "600 16px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+        ctx.fillText("Ad Budget", triager.x, triager.y);
+        return;
+      }
       ctx.fillText(`+$${revenue}`, triager.x, triager.y - 5);
       ctx.font = "600 8px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
       ctx.fillText("Ad Budget", triager.x, triager.y + 13);

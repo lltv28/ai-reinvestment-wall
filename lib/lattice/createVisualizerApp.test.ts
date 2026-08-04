@@ -10,27 +10,44 @@ import {
 } from "./generateVault";
 
 describe("createVisualizerApp", () => {
-  it("reduces direct-return mode to the brain, one large budget hub, and its triagers", () => {
+  it("keeps the full opening lattice around one large central budget hub", () => {
     const graph = generateVault({ nodeCount: 80, linkDensity: 0.1, seed: 1 });
     const directGraph = graphForReinvestmentMode(graph, "direct");
+    const focusedGraph = graphForReinvestmentMode(graph, "direct", true);
     const visibleIds = new Set(directGraph.nodes.map((node) => node.id));
-    const brain = directGraph.nodes.find((node) => node.id === "center");
     const budget = directGraph.nodes.find((node) => node.id === "hub-0");
+    const otherZoneAvatar = directGraph.nodes.find(
+      (node) => node.zoneIndex === 5 && node.ring === "avatar",
+    );
 
+    expect(directGraph.nodes.some((node) => node.ring === "gray")).toBe(true);
+    expect(otherZoneAvatar).toBeDefined();
+    expect(directGraph.nodes.some((node) => node.id === "center")).toBe(false);
+    expect(directGraph.nodes.filter((node) => node.ring === "hub")).toHaveLength(1);
+    expect(budget).toMatchObject({ radiusFraction: 0, radius: 60, label: "Ad Budget" });
     expect(
-      directGraph.nodes.every(
+      directGraph.nodes.some(
         (node) =>
-          node.id === "center" ||
-          node.id === "hub-0" ||
-          (node.zoneIndex === 0 && node.ring === "avatar"),
+          node.zoneIndex === 0 && (node.ring === "icon" || node.ring === "satellite"),
       ),
-    ).toBe(true);
-    expect(budget?.radius).toBeGreaterThan(brain?.radius ?? 0);
+    ).toBe(false);
     expect(
       directGraph.links.every(
         (link) => visibleIds.has(link.sourceId) && visibleIds.has(link.targetId),
       ),
     ).toBe(true);
+    expect(
+      directGraph.links.some(
+        (link) =>
+          link.sourceId === "hub-0" && link.targetId === otherZoneAvatar?.id,
+      ),
+    ).toBe(true);
+    expect(
+      focusedGraph.links.some(
+        (link) =>
+          link.sourceId === "hub-0" && link.targetId === otherZoneAvatar?.id,
+      ),
+    ).toBe(false);
   });
 
   it("maps recording keyboard shortcuts", () => {
