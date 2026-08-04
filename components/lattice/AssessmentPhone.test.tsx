@@ -64,6 +64,6 @@ describe('AssessmentPhone', () => {
 
     expect(connectedPhones).toHaveLength(1);
     expect(Array.from(container.querySelectorAll('.mini-phone')).indexOf(connectedPhones[0]!)).toBe(2);
-    expect(connectedPhones[0]!.textContent).toContain('$17 PAID');
+    expect(connectedPhones[0]!.textContent).toContain('$8 PAID');
   });
 });

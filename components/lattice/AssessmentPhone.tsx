@@ -2,6 +2,7 @@
 
 import { C } from '@/lib/adStage';
 import {
+  PROFIT_PER_AD_USD,
   REINVESTMENT_TIMING,
   triagerConnectionAt,
   type AssessmentPhoneScreen,
@@ -87,7 +88,7 @@ function MiniPhoneContent({ screen }: { screen: AssessmentPhoneScreen }) {
       <div className="mini-centered">
         <span className="mini-check large">✓</span>
         <span className="mini-kicker">PAYMENT</span>
-        <strong className="mini-paid">$17 PAID</strong>
+        <strong className="mini-paid">${PROFIT_PER_AD_USD} PAID</strong>
         <small>Qualified buyer</small>
       </div>
     );
@@ -97,7 +98,7 @@ function MiniPhoneContent({ screen }: { screen: AssessmentPhoneScreen }) {
     return (
       <div className="mini-centered">
         <span className="mini-ad">AD</span>
-        <strong className="mini-paid">+$8</strong>
+        <strong className="mini-paid">+${PROFIT_PER_AD_USD}</strong>
         <small>Reinvesting</small>
       </div>
     );
