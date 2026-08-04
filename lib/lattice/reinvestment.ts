@@ -11,6 +11,8 @@ export const TRIAGER_CONNECTION_DURATION_MS = 1_250;
 export const TRIAGER_SALE_ARRIVAL_MS = 1_050;
 export const TRIAGER_RETURN_DURATION_MS = 900;
 
+export type ReinvestmentMode = "ads" | "direct";
+
 export const REINVESTMENT_TIMING = {
   focusEnd: 2_000,
   phoneReveal: 2_150,
@@ -173,8 +175,14 @@ export function assessmentPhoneScreen(frame: ReinvestmentFrame): AssessmentPhone
   return "ready";
 }
 
-export function triagerRevenueUsd(frame: ReinvestmentFrame): number {
-  const firstReturnCompleteMs = TRIAGER_SALE_ARRIVAL_MS + TRIAGER_RETURN_DURATION_MS;
+export function triagerRevenueUsd(
+  frame: ReinvestmentFrame,
+  mode: ReinvestmentMode = "ads",
+): number {
+  const firstReturnCompleteMs =
+    mode === "direct"
+      ? TRIAGER_SALE_ARRIVAL_MS
+      : TRIAGER_SALE_ARRIVAL_MS + TRIAGER_RETURN_DURATION_MS;
   if (frame.connectionElapsedMs < firstReturnCompleteMs) return 0;
   const completedReturns =
     Math.floor(

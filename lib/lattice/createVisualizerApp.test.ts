@@ -1,14 +1,36 @@
 import { describe, expect, it, vi } from "vitest";
 import { nodePixelPosition } from "./CanvasRenderer";
-import { createVisualizerApp } from "./createVisualizerApp";
+import { createVisualizerApp, graphForReinvestmentMode } from "./createVisualizerApp";
 import {
   AVATAR_COUNT,
+  generateVault,
   SATELLITE_PER_ICON,
   TOTAL_ICON_COUNT,
   ZONE_COUNT,
 } from "./generateVault";
 
 describe("createVisualizerApp", () => {
+  it("removes only the AI Triager ad layer in direct-return mode", () => {
+    const graph = generateVault({ nodeCount: 80, linkDensity: 0.1, seed: 1 });
+    const directGraph = graphForReinvestmentMode(graph, "direct");
+    const visibleIds = new Set(directGraph.nodes.map((node) => node.id));
+
+    expect(
+      directGraph.nodes.some(
+        (node) =>
+          node.zoneIndex === 0 && (node.ring === "icon" || node.ring === "satellite"),
+      ),
+    ).toBe(false);
+    expect(
+      directGraph.nodes.some((node) => node.zoneIndex === 0 && node.ring === "avatar"),
+    ).toBe(true);
+    expect(
+      directGraph.links.every(
+        (link) => visibleIds.has(link.sourceId) && visibleIds.has(link.targetId),
+      ),
+    ).toBe(true);
+  });
+
   it("maps recording keyboard shortcuts", () => {
     const root = document.createElement("div");
     const actions: string[] = [];

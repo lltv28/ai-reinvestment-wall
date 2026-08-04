@@ -54,6 +54,16 @@ describe("reinvestmentFrame", () => {
     ).toBe(16);
   });
 
+  it("increments direct-return revenue as soon as the triager dot arrives", () => {
+    const frameAt = (connectionElapsedMs: number) => ({
+      ...reinvestmentFrame(5_000, 1),
+      connectionElapsedMs,
+    });
+
+    expect(triagerRevenueUsd(frameAt(TRIAGER_SALE_ARRIVAL_MS - 1), "direct")).toBe(0);
+    expect(triagerRevenueUsd(frameAt(TRIAGER_SALE_ARRIVAL_MS), "direct")).toBe(8);
+  });
+
   it("advances the phone through each screen at its intended moment", () => {
     expect(assessmentPhoneScreen(reinvestmentFrame(REINVESTMENT_TIMING.phoneReveal, 1))).toBe(
       "landing",

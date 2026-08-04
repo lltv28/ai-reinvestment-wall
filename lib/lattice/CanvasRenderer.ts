@@ -11,6 +11,7 @@ import {
   easeInOutCubic,
   triagerConnectionAt,
   triagerRevenueUsd,
+  type ReinvestmentMode,
   type ReinvestmentFrame,
 } from "./reinvestment";
 
@@ -204,7 +205,10 @@ export function worldToScreen(
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D;
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(
+    private canvas: HTMLCanvasElement,
+    private reinvestmentMode: ReinvestmentMode = "ads",
+  ) {
     const context = canvas.getContext("2d");
     if (!context) {
       throw new Error(
@@ -440,73 +444,95 @@ export class CanvasRenderer {
       this.drawPolylineProgress(connectorPoints, drawProgress, 0.64 * fade, 1.9);
       this.drawPolylineParticle(connectorPoints, particleProgress);
 
-      const adIndex = Math.round(
-        connection.triagerIndex * ((adPositions.length - 1) / (avatarPositions.length - 1)),
-      );
-      const adPosition = adPositions[adIndex];
       const saleProgress = clamp01((connection.progress - 0.32) / 0.52);
-      if (adPosition && saleProgress > 0) {
+      if (this.reinvestmentMode === "direct" && saleProgress > 0) {
         this.drawLineProgress(
           avatarPosition,
-          adPosition,
+          triager,
           easeInOutCubic(saleProgress),
-          0.32 * fade,
-          1.5,
+          0.62 * fade,
+          1.9,
         );
-        this.drawParticle(avatarPosition, adPosition, saleProgress, 4.6);
+        this.drawParticle(avatarPosition, triager, saleProgress, 5.2);
 
-        if (saleProgress > 0.78) {
-          const arrival = clamp01((saleProgress - 0.78) / 0.22);
-          ctx.globalAlpha = (1 - arrival) * 0.18;
-          ctx.fillStyle = PALETTE.flow;
-          ctx.beginPath();
-          ctx.arc(adPosition.x, adPosition.y, 11 + arrival * 9, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.globalAlpha = 1;
+        const directFade = 1 - clamp01((saleProgress - 0.7) / 0.3);
+        ctx.globalAlpha = directFade;
+        ctx.fillStyle = PALETTE.flow;
+        ctx.font = "700 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`+$${PROFIT_PER_AD_USD}`, avatarPosition.x, avatarPosition.y - 20);
+        ctx.globalAlpha = 1;
+      } else {
+        const adIndex = Math.round(
+          connection.triagerIndex * ((adPositions.length - 1) / (avatarPositions.length - 1)),
+        );
+        const adPosition = adPositions[adIndex];
+        if (adPosition && saleProgress > 0) {
+          this.drawLineProgress(
+            avatarPosition,
+            adPosition,
+            easeInOutCubic(saleProgress),
+            0.32 * fade,
+            1.5,
+          );
+          this.drawParticle(avatarPosition, adPosition, saleProgress, 4.6);
+
+          if (saleProgress > 0.78) {
+            const arrival = clamp01((saleProgress - 0.78) / 0.22);
+            ctx.globalAlpha = (1 - arrival) * 0.18;
+            ctx.fillStyle = PALETTE.flow;
+            ctx.beginPath();
+            ctx.arc(adPosition.x, adPosition.y, 11 + arrival * 9, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+          }
         }
       }
     }
 
-    const currentEventIndex = Math.floor(
-      frame.connectionElapsedMs / TRIAGER_CONNECTION_DURATION_MS,
-    );
-    for (const eventOffset of [0, 1]) {
-      const eventIndex = currentEventIndex - eventOffset;
-      if (eventIndex < 0) continue;
-      const eventAgeMs =
-        frame.connectionElapsedMs - eventIndex * TRIAGER_CONNECTION_DURATION_MS;
-      const returnProgress = clamp01(
-        (eventAgeMs - TRIAGER_SALE_ARRIVAL_MS) / TRIAGER_RETURN_DURATION_MS,
+    if (this.reinvestmentMode === "ads") {
+      const currentEventIndex = Math.floor(
+        frame.connectionElapsedMs / TRIAGER_CONNECTION_DURATION_MS,
       );
-      if (returnProgress <= 0 || returnProgress >= 1) continue;
+      for (const eventOffset of [0, 1]) {
+        const eventIndex = currentEventIndex - eventOffset;
+        if (eventIndex < 0) continue;
+        const eventAgeMs =
+          frame.connectionElapsedMs - eventIndex * TRIAGER_CONNECTION_DURATION_MS;
+        const returnProgress = clamp01(
+          (eventAgeMs - TRIAGER_SALE_ARRIVAL_MS) / TRIAGER_RETURN_DURATION_MS,
+        );
+        if (returnProgress <= 0 || returnProgress >= 1) continue;
 
-      const eventTriagerIndex = eventIndex % avatarPositions.length;
-      const eventAvatar = avatarPositions[eventTriagerIndex];
-      const eventAdIndex = Math.round(
-        eventTriagerIndex * ((adPositions.length - 1) / (avatarPositions.length - 1)),
-      );
-      const eventAd = adPositions[eventAdIndex];
-      if (!eventAvatar || !eventAd) continue;
+        const eventTriagerIndex = eventIndex % avatarPositions.length;
+        const eventAvatar = avatarPositions[eventTriagerIndex];
+        const eventAdIndex = Math.round(
+          eventTriagerIndex * ((adPositions.length - 1) / (avatarPositions.length - 1)),
+        );
+        const eventAd = adPositions[eventAdIndex];
+        if (!eventAvatar || !eventAd) continue;
 
-      const returnFade = 1 - clamp01((returnProgress - 0.84) / 0.16);
-      this.drawLineProgress(
-        eventAd,
-        triager,
-        easeInOutCubic(returnProgress),
-        0.62 * returnFade,
-        1.9,
-      );
-      this.drawParticle(eventAd, triager, returnProgress, 5.2);
+        const returnFade = 1 - clamp01((returnProgress - 0.84) / 0.16);
+        this.drawLineProgress(
+          eventAd,
+          triager,
+          easeInOutCubic(returnProgress),
+          0.62 * returnFade,
+          1.9,
+        );
+        this.drawParticle(eventAd, triager, returnProgress, 5.2);
 
-      const floatFade = 1 - clamp01((returnProgress - 0.62) / 0.38);
-      const { ctx } = this;
-      ctx.globalAlpha = floatFade;
-      ctx.fillStyle = PALETTE.flow;
-      ctx.font = "700 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(`+$${PROFIT_PER_AD_USD}`, eventAd.x, eventAd.y - 20 - returnProgress * 14);
-      ctx.globalAlpha = 1;
+        const floatFade = 1 - clamp01((returnProgress - 0.62) / 0.38);
+        const { ctx } = this;
+        ctx.globalAlpha = floatFade;
+        ctx.fillStyle = PALETTE.flow;
+        ctx.font = "700 14px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`+$${PROFIT_PER_AD_USD}`, eventAd.x, eventAd.y - 20 - returnProgress * 14);
+        ctx.globalAlpha = 1;
+      }
     }
   }
 
@@ -592,7 +618,11 @@ export class CanvasRenderer {
     ctx.font = "600 18px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(`$${triagerRevenueUsd(frame)}`, triager.x, triager.y + 0.5);
+    ctx.fillText(
+      `$${triagerRevenueUsd(frame, this.reinvestmentMode)}`,
+      triager.x,
+      triager.y + 0.5,
+    );
   }
 
   private drawTriagerLabel(

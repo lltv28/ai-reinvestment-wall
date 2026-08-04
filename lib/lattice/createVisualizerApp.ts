@@ -8,6 +8,7 @@ import {
   REINVESTMENT_TIMING,
   assessmentPhoneScreen,
   reinvestmentFrame,
+  type ReinvestmentMode,
   type ReinvestmentFrame,
 } from "./reinvestment";
 import {
@@ -43,6 +44,30 @@ export interface VisualizerDependencies {
   rendererFactory?: (canvas: HTMLCanvasElement) => Renderer;
   onAction?: (action: VaultAction) => void;
   onReinvestmentUpdate?: (frame: ReinvestmentFrame) => void;
+  reinvestmentMode?: ReinvestmentMode;
+}
+
+export function graphForReinvestmentMode(
+  graph: WheelGraph,
+  mode: ReinvestmentMode = "ads",
+): WheelGraph {
+  if (mode === "ads") return graph;
+
+  const hiddenIds = new Set(
+    graph.nodes
+      .filter(
+        (node) =>
+          node.zoneIndex === 0 && (node.ring === "icon" || node.ring === "satellite"),
+      )
+      .map((node) => node.id),
+  );
+
+  return {
+    nodes: graph.nodes.filter((node) => !hiddenIds.has(node.id)),
+    links: graph.links.filter(
+      (link) => !hiddenIds.has(link.sourceId) && !hiddenIds.has(link.targetId),
+    ),
+  };
 }
 
 function randomSeed(): number {
@@ -84,7 +109,7 @@ export function createVisualizerApp(
   try {
     renderer = dependencies.rendererFactory
       ? dependencies.rendererFactory(canvas)
-      : new CanvasRenderer(canvas);
+      : new CanvasRenderer(canvas, dependencies.reinvestmentMode);
   } catch (error) {
     const message = error instanceof Error ? error.message : "The visualizer could not start.";
     root.innerHTML = `<section class="fatal-message" role="alert"><strong>The visualizer could not start.</strong><span>${message}</span></section>`;
@@ -164,7 +189,12 @@ export function createVisualizerApp(
   }
 
   function renderNow(): void {
-    renderer.render(visibleGraph(), focusedNodeId, camera, reinvestmentSnapshot);
+    renderer.render(
+      graphForReinvestmentMode(visibleGraph(), dependencies.reinvestmentMode),
+      focusedNodeId,
+      camera,
+      reinvestmentSnapshot,
+    );
   }
 
   function publishReinvestment(force = false): void {
