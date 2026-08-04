@@ -618,11 +618,14 @@ export class CanvasRenderer {
     ctx.font = "600 18px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(
-      `$${triagerRevenueUsd(frame, this.reinvestmentMode)}`,
-      triager.x,
-      triager.y + 0.5,
-    );
+    const revenue = triagerRevenueUsd(frame, this.reinvestmentMode);
+    if (this.reinvestmentMode === "direct") {
+      ctx.fillText(`+$${revenue}`, triager.x, triager.y - 5);
+      ctx.font = "600 8px Instrument Sans, Inter, ui-sans-serif, system-ui, sans-serif";
+      ctx.fillText("Ad Budget", triager.x, triager.y + 13);
+    } else {
+      ctx.fillText(`$${revenue}`, triager.x, triager.y + 0.5);
+    }
   }
 
   private drawTriagerLabel(
